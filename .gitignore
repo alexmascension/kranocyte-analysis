@@ -1,0 +1,11 @@
+**/*.gz
+**/*.txt
+**/*.loom
+**/*.png
+**/*.pdf
+**/*.tar
+**/*.h5ad
+**/*.1
+**/*.tab
+**/*.fastq
+**/*checkpoint*
