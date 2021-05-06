@@ -9,3 +9,5 @@
 **/*.tab
 **/*.fastq
 **/*checkpoint*
+**/*.h5
+**/*.2
