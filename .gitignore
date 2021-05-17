@@ -11,3 +11,13 @@
 **/*checkpoint*
 **/*.h5
 **/*.2
+**/*.ndb
+**/*.sam
+**/*.bam
+**/*.bai
+**/*.fa
+**/*.fai
+data/mouse_ref/mouse_ref_gencode_magicblast.*
+**/*.bus
+**/*.ec
+**/*.json
