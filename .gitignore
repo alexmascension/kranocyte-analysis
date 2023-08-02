@@ -21,3 +21,8 @@ data/mouse_ref/mouse_ref_gencode_magicblast.*
 **/*.bus
 **/*.ec
 **/*.json
+**/*.csv
+**/*.rds
+**/*.db
+data/ARAUZO_03/
+
