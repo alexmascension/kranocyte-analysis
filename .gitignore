@@ -25,4 +25,4 @@ data/mouse_ref/mouse_ref_gencode_magicblast.*
 **/*.rds
 **/*.db
 data/ARAUZO_03/
-
+**/*.sqlite
