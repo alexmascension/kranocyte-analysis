@@ -26,3 +26,9 @@ data/mouse_ref/mouse_ref_gencode_magicblast.*
 **/*.db
 data/ARAUZO_03/
 **/*.sqlite
+
+*.html
+results/
+src_forgotten_nbs/
+__pycache__
+figures
