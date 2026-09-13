@@ -407,8 +407,14 @@ def flag_doublets(
         )
         calls = clf.fit(adata.X).predict(p_thresh=dd_p_thresh, voter_thresh=dd_voter_thresh)
         score = clf.doublet_score()
-        adata.obs["dd_score"] = np.asarray(getattr(score, "data", score)).ravel()
-        adata.obs["dd_doublet"] = np.asarray(calls).ravel() == 1
+        adata.obs["dd_score"] = pd.to_numeric(
+            pd.Series(np.asarray(getattr(score, "data", score)).ravel()),
+            errors="coerce").to_numpy(dtype=float)
+        llamadas = pd.to_numeric(pd.Series(np.asarray(calls).ravel()),
+                                 errors="coerce")
+        # dtype bool EXPLÍCITO: si se queda en object, anndata no puede
+        # escribir el h5ad y el cast a bool convierte los NaN en True.
+        adata.obs["dd_doublet"] = (llamadas == 1).fillna(False).to_numpy(dtype=bool)
         adata.uns.setdefault("qc", {})["doubletdetection"] = {
             "n_iters": dd_n_iters, "p_thresh": dd_p_thresh,
             "voter_thresh": dd_voter_thresh, "n_jobs": dd_n_jobs, "seed": seed,
@@ -423,8 +429,18 @@ def flag_doublets(
             adata.copy(), expected_doublet_rate=expected_doublet_rate,
             random_state=seed, knn_dist_metric="cosine", log_transform=True, copy=True,
         )
-        adata.obs["scrublet_score"] = res.obs["doublet_score"].values
-        adata.obs["scrublet_doublet"] = res.obs["predicted_doublet"].values
+        adata.obs["scrublet_score"] = pd.to_numeric(
+            pd.Series(res.obs["doublet_score"].values),
+            errors="coerce").to_numpy(dtype=float)
+        pred = pd.Series(res.obs["predicted_doublet"].values)
+        n_na = int(pred.isna().sum())
+        if n_na:
+            warnings.warn(
+                f"Scrublet no ha clasificado {n_na} células (NaN); van a False. "
+                f"Suele pasar cuando no encuentra un umbral bimodal claro: "
+                f"mira el histograma de scrublet_score antes de fiarte."
+            )
+        adata.obs["scrublet_doublet"] = pred.fillna(False).astype(bool).to_numpy()
         adata.uns.setdefault("qc", {})["scrublet"] = dict(
             res.uns.get("scrublet", {}).get("parameters", {})
         )
@@ -467,7 +483,6 @@ def qc_embedding(
     adata.obsm["X_umap_qc"] = tmp.obsm["X_umap"]
     del tmp
     return adata
-
 
 
 # --------------------------------------------------------------------------
@@ -626,17 +641,72 @@ def apply_qc_flags(
         "droplet_exclude": list(droplet_exclude), "doublet_cols": list(doublet_cols),
     }
 
-
     if verbose:
         print(f"[qc] {int(adata.obs['qc_pass'].sum())}/{adata.n_obs} pasan "
               f"({100 * adata.obs['qc_pass'].mean():.1f}%)")
     return adata
 
 
-
 # --------------------------------------------------------------------------
 # 6. resumen entre muestras
 # --------------------------------------------------------------------------
+
+def sanitize_for_h5ad(adata: ad.AnnData, verbose: bool = True) -> ad.AnnData:
+    """
+    Arregla las columnas de obs/var que impiden escribir el .h5ad.
+
+    El síntoma es este error, y no dice nada útil:
+
+        TypeError: Can't implicitly convert non-string objects to strings
+        Error raised while writing key 'scrublet_doublet' of ... to /obs
+
+    La causa es una columna de dtype 'object'. anndata solo sabe escribir
+    numéricas, booleanas, categóricas y de texto; ante un 'object' asume texto
+    y h5py se atraganta al encontrar booleanos o NaN dentro. Se llega ahí con
+    facilidad al concatenar muestras: si en una el detector de doublets devolvió
+    NaN, o si una columna falta en una muestra y sobra en otra, la concatenación
+    la promociona a object sin avisar.
+
+    Y no es solo un problema al guardar. Un 'object' con NaN se cuela en los
+    filtros: astype(bool) convierte NaN en True, porque bool(nan) es True.
+
+    Convierte in place y devuelve el mismo objeto.
+    """
+    cambios = []
+    for donde, df in (("obs", adata.obs), ("var", adata.var)):
+        for col in df.columns:
+            if df[col].dtype != object:
+                continue
+            v = df[col]
+            n_na = int(v.isna().sum())
+            vals = set(map(type, v.dropna().unique().tolist()))
+            if vals <= {bool, np.bool_}:
+                df[col] = np.array([bool(x) if pd.notna(x) else False
+                                    for x in v], dtype=bool)
+                cambios.append((donde, col, "object -> bool", n_na))
+            elif vals <= {str}:
+                df[col] = v.fillna("").astype(str)
+                cambios.append((donde, col, "object -> str", n_na))
+            elif all(np.issubdtype(np.dtype(t), np.number) for t in vals) and vals:
+                df[col] = pd.to_numeric(v, errors="coerce")
+                cambios.append((donde, col, "object -> numérico", n_na))
+            else:
+                df[col] = v.astype(str)
+                cambios.append((donde, col, f"mezcla {vals} -> str", n_na))
+
+    if verbose:
+        if not cambios:
+            print("[sanitize] nada que arreglar")
+        else:
+            for donde, col, que, n_na in cambios:
+                extra = f", {n_na} NaN" if n_na else ""
+                print(f"[sanitize] {donde}['{col}']: {que}{extra}")
+            if any(x[3] for x in cambios):
+                print("[sanitize] Los NaN en columnas booleanas iban a False. "
+                      "Si eran muchos, comprueba por qué el detector no "
+                      "clasificó esas células ANTES de aceptar el filtrado.")
+    return adata
+
 
 def qc_summary(
     adatas: Mapping[str, ad.AnnData],
@@ -1553,11 +1623,3 @@ def suggest_thresholds(
               "qué se lleva por delante cada bandera en qc_summary.")
     out["_razones"] = razones
     return out
-
-
-
-
-
-
-
-

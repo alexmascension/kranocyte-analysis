@@ -32,3 +32,5 @@ results/
 src_forgotten_nbs/
 __pycache__
 figures
+data/
+.cache/
