@@ -60,10 +60,17 @@ palette = {
 
 
 
-FONT_URL = (
+FONT_BASE_URL = (
     "https://raw.githubusercontent.com/alexmascension/myplotfonts/"
-    "main/TeXGyreHeros/texgyreheros-regular.otf"
+    "main/TeXGyreHeros/"
 )
+
+FONT_FILES = {
+    "regular": "texgyreheros-regular.otf",
+    "bold": "texgyreheros-bold.otf",
+    "italic": "texgyreheros-italic.otf",
+    "bolditalic": "texgyreheros-bolditalic.otf",
+}
 
 
 
@@ -78,20 +85,56 @@ def set_plotting_style():
     font_dir = Path(BASE_DIR) / ".cache" / "fonts"
     font_dir.mkdir(parents=True, exist_ok=True)
 
-    font_path = font_dir / "texgyreheros-regular.otf"
+    font_paths = {}
 
-    if not font_path.exists():
-        urlretrieve(FONT_URL, font_path)
+    for style, filename in FONT_FILES.items():
+        font_path = font_dir / filename
 
-    font_manager.fontManager.addfont(str(font_path))
-    custom_font = font_manager.FontProperties(fname=str(font_path))
+        if not font_path.exists():
+            urlretrieve(FONT_BASE_URL + filename, font_path)
 
+        font_manager.fontManager.addfont(str(font_path))
+        font_paths[style] = font_path
 
-    # Set font and plot properties
+    regular_font = font_manager.FontProperties(
+        fname=str(font_paths["regular"])
+    )
+    bold_font = font_manager.FontProperties(
+        fname=str(font_paths["bold"])
+    )
+    italic_font = font_manager.FontProperties(
+        fname=str(font_paths["italic"])
+    )
+    bolditalic_font = font_manager.FontProperties(
+        fname=str(font_paths["bolditalic"])
+    )
+
+    family = regular_font.get_name()
+
     sc.set_figure_params(dpi=250)
     sns.set_style("white")
-    rcParams["font.family"] = custom_font.get_name()
 
+    rcParams.update({
+        # Main Matplotlib font family
+        "font.family": family,
+        "font.sans-serif": [family],
+        "font.cursive": [family],
+
+        # MathText
+        "mathtext.fontset": "custom",
+        "mathtext.rm": family,
+        "mathtext.it": f"{family}:italic",
+        "mathtext.bf": f"{family}:bold",
+        "mathtext.bfit": f"{family}:bold:italic",
+        "mathtext.cal": family,
+    })
+
+    return {
+        "regular": regular_font,
+        "bold": bold_font,
+        "italic": italic_font,
+        "bolditalic": bolditalic_font,
+    }
 
 
 def savefig(fig, filename, fig_dir="../figures/", dpi=600, bbox_inches='tight'):
