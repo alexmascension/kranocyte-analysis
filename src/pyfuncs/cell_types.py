@@ -208,3 +208,77 @@ PALETTE_CELL_TYPE = {
     'GLIA':      "#EE2561",
     'Immune':      "#E766E7",
 }
+
+
+
+
+# We apply this 
+DICT_RENAMING_INTEGRATION = {
+    'FAP_A': 'FAP.1',
+    'FAP_AB': 'FAP.1',
+    'FAP_AF': 'FAP.1',
+    'FAP_B1': 'FAP.4',    
+    'FAP_B2': 'FAP.4',
+    'FAP_E': 'FAP.2',
+    'FAP_C': 'FAP.3',
+    'FAP_D': 'FAP.3',
+    'FAP_F': 'FAP.3',
+    'Krano_A': 'FAP.5',
+    'Krano_B': 'FAP.6',
+    'Krano_C': 'FAP.6',
+    'Endothelial*': 'ENDO',
+    'Sat_A1': 'SAT', 
+    'Sat_A2': 'SAT', 
+    'Sat_B': 'SAT', 
+    'Teno_A': 'TNMD', 
+    'Teno_D': 'TNMD',
+    'Teno_B': 'TNMD', 
+    'Teno_C': 'TNMD', 
+
+    # Other populations
+    "Immune": "IMM.MONO-MAC", 
+    "B_cell": "IMM.B", 
+    "Dendritic": "IMM.DEN",
+    "Mast_cell": "IMM.MAST",
+    "T_NK": "IMM.NK",
+    "Neutrophil": "IMM.NEU",
+
+    'Sat_U': 'SAT', 
+    'Krano_U': 'FAP.5',
+    "SMC": "SMC-SMMC",
+    "SMMC": "SMC-SMMC",
+    "Glial_Schwann": "GLIA",
+    "Lymphatic_EC": "ENDO.LYMPH",
+    'Pericyte': 'ENDO.PERI',
+                               
+}
+
+
+
+
+PALETTE_CELL_TYPE_INTEGRATION = {
+    # ---- Minor (más oscuros) ----
+    # FAP (7)
+    'FAP.1':"#A1D9F0",
+    'FAP.2' :"#4C92AD",
+    'FAP.3':"#12485E",
+    'FAP.4':"#B2A1F0",
+    'FAP.5' :"#694CAD",
+    'FAP.6':"#26125E",
+
+    "TNMD":"#6F5214",
+    'SAT':"#2E9277",
+    'SMC-SMMC':      "#79DD6F",
+    'GLIA':      "#CAC031",
+
+    'ENDO':   "#C23C64",
+    'ENDO.LYMPH':   "#F8608D",
+    'ENDO.PERI':   "#991F43",
+
+    'IMM.MONO-MAC':      "#331903",
+    'IMM.B':      "#D36B17",
+    'IMM.NK':      "#F7A765",
+    'IMM.DEN':      "#96490A",
+    'IMM.MAST':      "#D35217",
+    'IMM.NEU':      "#92390F",
+}

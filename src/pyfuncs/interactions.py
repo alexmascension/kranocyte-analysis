@@ -907,7 +907,7 @@ def run_liana(
     adata: ad.AnnData,
     groupby: str,
     resource: str = "mouseconsensus",
-    expr_prop: float = 0.1,
+    expr_prop: float = 0.025,
     n_perms: int = 1000,
     use_raw: bool = False,
     key_added: str = "liana_res",
