@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kranocito"
+version = "2.0.0"
+description = "Caracterizacion de poblaciones de kranocitos y FAPs en musculo esqueletico de raton"
+requires-python = ">=3.11,<3.12"
+readme = "README.md"
+
+# Las dependencias se declaran en environment.yml y se fijan en el lock.
+# Aqui solo lo imprescindible para que el paquete importe.
+dependencies = [
+    "numpy",
+    "pandas",
+    "scipy",
+    "anndata",
+    "scanpy",
+    "matplotlib",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["kranocito*"]
+
+[tool.setuptools.package-data]
+kranocito = ["py.typed"]

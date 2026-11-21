@@ -1,36 +1,54 @@
-**/*.gz
-**/*.txt
-**/*.loom
-**/*.png
-**/*.pdf
-**/*.tar
-**/*.h5ad
-**/*.1
-**/*.tab
-**/*.fastq
-**/*checkpoint*
-**/*.h5
-**/*.2
-**/*.ndb
-**/*.sam
-**/*.bam
-**/*.bai
-**/*.fa
-**/*.fai
-data/mouse_ref/mouse_ref_gencode_magicblast.*
-**/*.bus
-**/*.ec
-**/*.json
-**/*.csv
-**/*.rds
-**/*.db
-data/ARAUZO_03/
-**/*.sqlite
 
-*.html
-results/
-src_forgotten_nbs/
-__pycache__
-figures
+# --- datos, resultados y figuras: fuera por completo ------------------------
 data/
+results/
+figures/
+deposits/
+
+# ...salvo los README que explican cómo reconstruir cada nivel
+!data/README.md
+!results/README.md
+!figures/README.md
+
+# --- notebooks: el fuente sí, las salidas no --------------------------------
+# Los .ipynb se versionan con las salidas quitadas (CODE-NB-004, nbstripout).
+notebooks/rendered/
+
+# --- configuración local ----------------------------------------------------
+config/config.env
+env_snapshot_*/
+
+# --- migración --------------------------------------------------------------
+_TO_DELETE/
+_ARCHIVE/
+migration_*.log
+undo_*.sh
+
+# --- ruido de herramientas --------------------------------------------------
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+*.egg-info/
+build/
+dist/
 .cache/
+.pybiomart.sqlite
+.DS_Store
+*/**.gz
+*.html
+.vscode/
+src/src_forgotten_nbs
+
+# ---------------------------------------------------------------------------
+# Lo que SÍ se versiona aunque parezca dato (excepción de CODE-PROV-002:
+# tablas derivadas pequeñas, regeneradas por un script, nunca editadas a mano):
+#
+#   config/samples/*.tsv        qué es cada GSM y a qué condición pertenece
+#   workflow/containers.tsv     imagen, sha256 del .sif y procedencia
+#   deposits/*/MANIFEST.tsv     manifiesto de cada bundle  (ver excepción abajo)
+# ---------------------------------------------------------------------------
+!deposits/
+deposits/*
+!deposits/*/
+deposits/*/*
+!deposits/*/MANIFEST.tsv

@@ -264,9 +264,42 @@ download_ena_fastq() {
   fi
 
   log "Downloading ${filename}"
-  curl --fail --location --show-error \
-    --retry "${CURL_RETRIES}" --retry-delay 5 \
-    --continue-at - --output "${partial}" "${url}"
+
+  # Resume loop: the full campaign is ~790 GB from ENA, and a single curl
+  # invocation leaves a half-written .part behind on any interruption. Running
+  # curl as the condition of an if keeps `set -e` from aborting the script and
+  # lets the next attempt resume from where the transfer stopped.
+  local attempt=1
+  local max_attempts="${CURL_RESUME_ATTEMPTS:-30}"
+  local curl_status=0
+  [[ "${max_attempts}" =~ ^[1-9][0-9]*$ ]] || \
+    die "CURL_RESUME_ATTEMPTS must be a positive integer"
+
+  while (( attempt <= max_attempts )); do
+    if [[ -s "${partial}" ]]; then
+      log "${filename}: attempt ${attempt}/${max_attempts}; resuming at $(stat -c '%s' "${partial}") bytes"
+    else
+      log "${filename}: attempt ${attempt}/${max_attempts}; starting download"
+    fi
+
+    if curl --fail --location --show-error \
+            --connect-timeout 30 \
+            --retry "${CURL_RETRIES}" --retry-delay 5 \
+            --continue-at - --output "${partial}" "${url}"
+    then
+      curl_status=0
+      break
+    else
+      curl_status=$?
+    fi
+
+    (( attempt == max_attempts )) && \
+      die "Download of ${filename} failed after ${max_attempts} attempts (curl exit ${curl_status}). Partial file preserved: ${partial}"
+
+    log "${filename}: curl exited with ${curl_status}; keeping the partial file and retrying in 15 s"
+    sleep 15
+    attempt=$((attempt + 1))
+  done
 
   [[ -s "${partial}" ]] || die "Downloaded FASTQ is empty: ${partial}"
   md5_matches "${partial}" "${expected_md5}" || \
@@ -365,7 +398,10 @@ run_starsolo() {
   local gsm="$1"
   local fastq_dir="$2"
   local result_dir="$3"
-  local completed_matrix="${result_dir}/Solo.out/Gene/raw/matrix.mtx"
+  # The notebooks load GeneFull/raw/UniqueAndMult-EM.mtx (pyfuncs.io.load_full_adata,
+  # gene_dir="GeneFull", matrix_file="UniqueAndMult-EM.mtx"). The completion check must
+  # test THAT matrix: with --soloFeatures GeneFull Velocyto, Solo.out/Gene/ is never created.
+  local completed_matrix="${result_dir}/Solo.out/GeneFull/raw/UniqueAndMult-EM.mtx"
   local completed_velocyto="${result_dir}/Solo.out/Velocyto/raw/spliced.mtx"
   local r1_length r2_length r1_csv r2_csv
 

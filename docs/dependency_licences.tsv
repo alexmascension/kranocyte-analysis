@@ -1,0 +1,35 @@
+package	licence	family	source
+UpSetPlot	BSD-3-Clause	BSD	PyPI
+anndata	BSD-3-Clause	BSD	PyPI
+cellbender	BSD (3-Clause)	BSD	PyPI
+cellrank	BSD-3-Clause	BSD	PyPI
+gseapy	BSD-3-Clause	BSD	PyPI
+liana	BSD-3-Clause	BSD	PyPI
+networkx	BSD-3-Clause	BSD	PyPI
+numpy	BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0	BSD	PyPI
+pandas	BSD-3-Clause	BSD	PyPI
+scFates	BSD-3-Clause	BSD	PyPI
+scanpy	BSD-3-Clause	BSD	PyPI
+scib-metrics	BSD-3-Clause	BSD	PyPI
+scikit-learn	BSD-3-Clause	BSD	PyPI
+scipy	BSD-3-Clause	BSD	PyPI
+scranPY	BSD-3-Clause	BSD	GitHub sfortma2/scranPY (git dependency, not on PyPI)
+scvelo	BSD-3-Clause	BSD	PyPI
+seaborn	BSD-3-Clause	BSD	PyPI
+statsmodels	BSD-3-Clause	BSD	PyPI
+threadpoolctl	BSD-3-Clause	BSD	PyPI
+triku	BSD	BSD	PyPI
+anndata2ri	GPL-3.0-or-later	GPL (strong copyleft)	PyPI
+fa2	GPL-3.0-only	GPL (strong copyleft)	PyPI
+harmonypy	GPL-3.0-or-later	GPL (strong copyleft)	PyPI
+phate	GPL-2.0	GPL (strong copyleft)	PyPI
+rpy2	GPL-2.0-or-later	GPL (strong copyleft)	PyPI
+adjustText	MIT	MIT	PyPI
+cellassign	MIT	MIT	PyPI
+cellphonedb	MIT	MIT	PyPI
+doubletdetection	MIT	MIT	PyPI
+palantir	MIT	MIT	PyPI
+plotly	MIT	MIT	PyPI
+pybiomart	MIT	MIT	PyPI
+scranpy	MIT	MIT	PyPI
+matplotlib	PSF (permisiva)	PSF	PyPI

@@ -1,0 +1,8 @@
+artefact	type	licence	source	action_required
+star_2.7.11b.sif	Apptainer image	org.opencontainers.image.licenses label EMPTY	Built from docker://gcfntnu/star:2.7.11b on anaconda/docker-images. Contains STAR (MIT) plus Anaconda-distributed packages. sha256 c3c99cfff54ff21d849385af7651c7ecdade7985bef5cafa84fc9d6069b74708	CONFIRM before redistributing: Anaconda terms of service for the base image
+STAR 2.7.11b	software	MIT	github.com/alexdobin/STAR	No restriction on redistribution
+GCF_000001635.27 GRCm39 (FASTA + GTF)	reference annotation	NCBI / US public domain	ftp.ncbi.nlm.nih.gov	Check the NCBI notice; normally redistributable with attribution
+3M-february-2018.txt	10x barcode whitelist	10x Genomics terms	Distributed by 10x / teichlab scg_lib_structs	CONFIRM whether the 10x terms allow redistribution in a deposit
+Reprocessed matrices from GSE138826 / GSE215922 / GSE227075 / GSE221736	derived work of third-party data	per the terms of each source publication	GEO / SRA	Cite the source accession in the deposit; check each paper licence
+CellPhoneDB database v5.0.0	database	CellPhoneDB licence	cellphonedb.org	Check whether it is redistributed or only downloaded at run time
+Mouse-human orthologues (BioMart / MGI)	annotation table	Ensembl / MGI terms	biomart, informatics.jax.org	Normally redistributable with attribution; confirm MGI

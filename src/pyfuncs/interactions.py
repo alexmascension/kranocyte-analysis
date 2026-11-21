@@ -319,7 +319,31 @@ def prepare_cpdb_input(
         else:
             M = np.expm1(M)
         origen = f"expm1('{log_layer}')"
+    elif log_layer and adata.uns.get("normalization", {}).get("scran") is not None:
+        # DEPOSITED objects do not carry the log layer: it was removed because it is
+        # identical to X (see docs/H5AD_SLIMMING_SPEC.md). Falling through to the
+        # library-size branch here would be a SILENT change of method -- a different
+        # normalisation with no warning. If uns['normalization'] records scran, X is
+        # that same log-normalised matrix and expm1(X) is the right thing to use.
+        M = adata.X.copy()
+        if sp.issparse(M):
+            M.data = np.expm1(M.data)
+        else:
+            M = np.expm1(M)
+        origen = f"expm1(X) -- '{log_layer}' absent; X is the scran+log1p matrix"
+        if verbose:
+            print(f"[cpdb] layer '{log_layer}' is not in the object; using X, which "
+                  f"uns['normalization'] records as scran+log1p")
     else:
+        if log_layer:
+            warnings.warn(
+                f"prepare_cpdb_input: log_layer='{log_layer}' was requested but it is not in "
+                f"adata.layers and uns['normalization'] does not record scran, so there is no "
+                f"way to tell whether X is that matrix. Falling back to library-size "
+                f"normalisation over '{counts_layer}', which is NOT the same method. Pass "
+                f"layer= or log_layer=None explicitly if that is what you want.",
+                stacklevel=2,
+            )
         M = adata.layers[counts_layer] if counts_layer in adata.layers else adata.X
         M = sp.csr_matrix(M, dtype=np.float64)
         libs = np.asarray(M.sum(axis=1)).ravel()
