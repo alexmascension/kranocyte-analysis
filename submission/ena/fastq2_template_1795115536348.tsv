@@ -1,0 +1,2 @@
+FileType	fastq	Read submission file type
+sample	study	instrument_model	library_name	library_source	library_selection	library_strategy	library_layout	forward_file_name	forward_file_md5	reverse_file_name	reverse_file_md5	insert_size	library_construction_protocol	library_design
