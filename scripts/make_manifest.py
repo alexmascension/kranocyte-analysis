@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 """
-Genera results/manifest.tsv: el registro de todo lo que NO esta en git.
+Write results/manifest.tsv: the record of everything that is NOT in git.
 
-Para cada fichero de data/, results/ y figures/ anota ruta, tamano, fecha, sha256
-y, cuando se puede deducir, el notebook que lo produjo. Es lo que mantiene la
-trazabilidad entre un commit y las salidas que genero, ahora que los datos y las
-figuras exploratorias viven fuera del control de versiones.
+For every file under data/, results/ and figures/ it records path, size, date,
+sha256 and, where it can be deduced, the notebook that produced it. This is what
+keeps a commit traceable to the outputs it generated, now that the data and the
+exploratory figures live outside version control.
 
-    python scripts/make_manifest.py              # escribe results/manifest.tsv
-    python scripts/make_manifest.py --check      # falla si algo cambio sin anotarse
+    python scripts/make_manifest.py              # writes results/manifest.tsv
+    python scripts/make_manifest.py --check      # fails if something changed unrecorded
 
-El hash de los ficheros de mas de HASH_LIMIT bytes se omite (columna '-'): hashear
-cientos de GB en cada ejecucion no compensa. Para esos se registra tamano y fecha.
+Files larger than HASH_LIMIT bytes are not hashed (column '-'): hashing hundreds of
+GB on every run is not worth it. For those, size and date are recorded instead.
 """
 
 from __future__ import annotations
@@ -49,7 +49,7 @@ PRODUCERS = {
 
 
 def repo_root() -> Path:
-    env = os.environ.get("KRANOCITO_ROOT")
+    env = os.environ.get("KRANOCYTE_ROOT")
     if env:
         return Path(env).expanduser()
     here = Path(__file__).resolve()

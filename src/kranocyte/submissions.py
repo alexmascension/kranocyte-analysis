@@ -294,7 +294,7 @@ def cxg_report(adata, verbose: bool = True) -> dict:
         print(f"  obs: faltan {len(missing_obs)} campos -> {missing_obs}")
         print(f"  uns: faltan {len(missing_uns)} campos -> {missing_uns}")
         print(f"  var indexado por Ensembl: {var_looks_ensembl}"
-              f"{'' if var_looks_ensembl else '  <- hay que mapear desde NCBI RefSeq'}")
+              f"{'' if var_looks_ensembl else '  <- needs mapping from NCBI RefSeq'}")
         print("\n  Valores ya determinados:")
         for key, (value, why) in CXG_KNOWN_VALUES.items():
             print(f"    {key:42s} = {value:18s} ({why})")

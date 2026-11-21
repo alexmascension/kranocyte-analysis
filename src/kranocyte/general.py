@@ -11,7 +11,7 @@ from matplotlib import font_manager, rcParams
 
 import sys
 sys.path.append('..')
-from pyfuncs.common_vars import SEED
+from kranocyte.common_vars import SEED
 
 
 

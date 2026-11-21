@@ -1,19 +1,19 @@
-# Entorno de analisis de kranocito.
+# Analysis environment for kranocyte.
 #
-# IMPORTANTE: este fichero describe el entorno; NO lo fija. El fichero autoritativo es
-# el lock que genera `capture_env.sh` en la maquina donde se produjeron los resultados.
-# Generar este environment.yml NO sustituye a capturar el entorno real.
+# IMPORTANT: this file DESCRIBES the environment; it does not PIN it. The authoritative
+# file is the lock produced by `capture_env.sh` on the machine where the results were
+# generated. Writing this environment.yml is NOT a substitute for capturing the real one.
 #
-# Python 3.11 no es una eleccion libre: es la version que declaran los notebooks
-# (metadata.language_info.version = 3.11.0). Las versiones de abajo son las ultimas
-# de cada paquete que admiten 3.11; varias de ellas ya NO son las ultimas publicadas.
-# Sin estos topes, una reinstalacion desde cero resuelve a versiones distintas de las
-# que produjeron los resultados -- en liana y cellrank, a una version MAYOR distinta.
+# Python 3.11 is not a free choice: it is the version the notebooks declare
+# (metadata.language_info.version = 3.11.0). The versions below are the last release of
+# each package that still supports 3.11; several of them are no longer the latest
+# published. Without these ceilings, a clean reinstall resolves to versions other than
+# the ones that produced the results -- for liana and cellrank, to a different MAJOR.
 #
-# La ubicacion conda-forge/bioconda de cada paquete no se ha podido verificar en linea;
-# confirmala al generar el lock.
+# The conda-forge/bioconda location of each package could not be verified online;
+# confirm it when generating the lock.
 
-name: kranocito
+name: kranocyte
 channels:
   - conda-forge
   - bioconda
@@ -22,7 +22,7 @@ channels:
 dependencies:
   - python=3.11
 
-  # --- nucleo cientifico ---
+  # --- scientific core ---
   - numpy<=2.4.6
   - scipy<=1.17.1
   - pandas<=3.1.1
@@ -31,7 +31,7 @@ dependencies:
   - networkx<=3.6.1
   - threadpoolctl<=3.8.0
 
-  # --- graficos ---
+  # --- plotting ---
   - matplotlib<=3.11.2
   - seaborn<=0.13.2
   - plotly<=7.1.0
@@ -40,41 +40,41 @@ dependencies:
   - anndata<=0.12.19
   - scanpy<=1.11.5
   - scvelo<=0.3.4
-  - cellrank<=2.0.7        # 2.x: la 2.4 ya no admite 3.11
+  - cellrank<=2.0.7        # 2.x: 2.4 no longer supports 3.11
   - harmonypy<=2.1.0
   - phate<=2.0.0
   - gseapy<=1.3.2
   - leidenalg
   - python-igraph
 
-  # --- puente con R (scran via rpy2, backend alternativo de size factors) ---
+  # --- bridge to R (scran via rpy2, alternative size-factor backend) ---
   - rpy2<=3.6.9
   - anndata2ri<=2.0.1
   - bioconductor-scran
 
   - pip
   - pip:
-      # --- analisis especializado ---
+      # --- specialised analysis ---
       - triku<=2.2.0
       - cellassign<=2.1.0
       - doubletdetection<=4.3.0.post1
       - scib-metrics<=0.5.10
       - scFates<=1.2.8
       - palantir<=1.4.6
-      - liana<=1.10.0          # 1.x: la 2.x ya no admite 3.11 y cambia la API
+      - liana<=1.10.0          # 1.x: 2.x no longer supports 3.11 and changes the API
       - cellphonedb<=5.0.1
       - cellbender<=0.4.0
 
-      # --- utilidades ---
+      # --- utilities ---
       - pybiomart<=0.2.0
       - adjustText<=1.4.0
       - UpSetPlot<=0.9.0
       - fa2<=1.1.2
-      - scranpy<=0.3.1      # BiocPy/libscran: centrado por library size
+      - scranpy<=0.3.1      # BiocPy/libscran: library-size centring
 
-      # scranPY (sfortma2) NO esta en PyPI y es OTRO paquete distinto de scranpy:
-      # implementa computeSumFactors de Lun et al. Fijar por commit, no por rama.
+      # scranPY (sfortma2) is NOT on PyPI and is a DIFFERENT package from scranpy:
+      # it implements computeSumFactors of Lun et al. Pin it by commit, not by branch.
       - git+https://github.com/sfortma2/scranPY.git@<COMMIT_SHA>
 
-      # el propio proyecto, en modo editable
+      # the project itself, in editable mode
       - -e .

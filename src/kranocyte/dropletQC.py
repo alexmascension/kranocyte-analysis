@@ -9,7 +9,7 @@ def _prep_Z_from_df(df):
     nf = np.asarray(df["nuclear_RNA_frac"].values, float)
     umi = np.asarray(df["umi"].values, float)
 
-    # máscara de válidos
+    # mask of valid entries
     ok = np.isfinite(nf) & np.isfinite(umi) & (nf >= 0) & (umi >= 0)
     X = np.c_[np.log10(umi[ok] + 1.0), nf[ok]]  # (logUMI, NF)
     scaler = StandardScaler().fit(X)
@@ -17,12 +17,12 @@ def _prep_Z_from_df(df):
     return Z, X, scaler, ok
 
 def _pick_empty_by_center(centers_X):
-    # centro "más vacío" = menor logUMI y menor NF
-    ranks = np.argsort(centers_X, axis=0)  # por col
+    # "emptiest" center = lowest logUMI and lowest NF
+    ranks = np.argsort(centers_X, axis=0)  # per column
     score = ranks[:, 0] + ranks[:, 1]
     return int(np.argmin(score))
 
-# ---------- Stage 1: empties con KMeans ----------
+# ---------- Stage 1: empties with KMeans ----------
 def kmeans_empty(df, n_init=50, random_state=0, nf_rescue=0.05, umi_rescue=1000):
     Z, X, scaler, ok = _prep_Z_from_df(df)
 
@@ -30,32 +30,32 @@ def kmeans_empty(df, n_init=50, random_state=0, nf_rescue=0.05, umi_rescue=1000)
     centers_X = scaler.inverse_transform(km.cluster_centers_)
     empty_k = _pick_empty_by_center(centers_X)
 
-    # etiquetas solo para las filas válidas (ok)
+    # labels for the valid rows (ok) only
     lab_valid = np.where(km.labels_ == empty_k, "empty_droplet", "cell")
 
-    # rescate conservador
+    # conservative rescue
     nf_m = X[:, 1]
     umi_m = (10**X[:, 0]) - 1.0
     rescue = (nf_m >= nf_rescue) & (umi_m >= umi_rescue)
     lab_valid[rescue] = "cell"
 
-    # crea columna completa alineada por índice
+    # build the full column, aligned by index
     labels = np.full(df.shape[0], "unassigned", dtype=object)
     labels[np.where(ok)[0]] = lab_valid
     df["empty_droplet"] = labels
 
-    return centers_X  # solo los centros
+    return centers_X  # centers only
 
-# ---------- Stage 2: damaged vs cell (en 'cells') ----------
+# ---------- Stage 2: damaged vs cell (within 'cells') ----------
 def split_cells_into_damaged(df, method="kmeans", random_state=0, nf_damaged_threshold=0.40):
-    # subset de células
+    # subset of cells
     sub = df[df["empty_droplet"] == "cell"].copy()
     if sub.empty:
         df[f"damaged_cell_{method}"] = "unassigned"
         return None, np.nan
 
     Z, X, scaler, ok = _prep_Z_from_df(sub)
-    sub_valid_index = sub.index[ok]  # índices originales (válidos)
+    sub_valid_index = sub.index[ok]  # original (valid) indices
 
     if method == "kmeans":
         model = KMeans(n_clusters=2, n_init=50, random_state=random_state).fit(Z)
@@ -67,17 +67,17 @@ def split_cells_into_damaged(df, method="kmeans", random_state=0, nf_damaged_thr
         centers_X = scaler.inverse_transform(model.means_)
         comp = model.predict(Z)
     else:
-        raise ValueError("method debe ser 'kmeans' o 'gmm'")
+        raise ValueError("method must be 'kmeans' or 'gmm'")
 
-    # cluster con mayor NF = candidato a 'damaged'
+    # cluster with the highest NF = 'damaged' candidate
     dmg_k = int(np.argmax(centers_X[:, 1]))
     nf_mean_dmg = float(centers_X[dmg_k, 1])
 
     labels_cells = np.where(comp == dmg_k, "damaged_cell", "cell")
     if nf_mean_dmg < nf_damaged_threshold:
-        labels_cells[:] = "cell"  # no supera umbral absoluto
+        labels_cells[:] = "cell"  # does not exceed the absolute threshold
 
-    # inicializa columna y asigna ALINEANDO por índice
+    # initialize the column and assign ALIGNED by index
     col = f"damaged_cell_{method}"
     if col not in df.columns:
         df[col] = "unassigned"

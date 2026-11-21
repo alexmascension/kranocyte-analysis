@@ -1,39 +1,39 @@
 """
-Normalización sobre el objeto concatenado y filtrado.
+Normalisation of the concatenated, filtered object.
 
-Los size factors de scran son una escala POR CÉLULA, así que calcularlos sobre
-el conjunto de muestras da un pooling más estable y deja a todas en la misma
-escala. Eso sí: el pooling de scran necesita un clustering previo hecho sobre
-el objeto YA unido, y ese clustering tiene que existir antes de normalizar —
-de ahí el paso preliminar.
+scran size factors are a PER-CELL scale, so computing them over the full set
+of samples gives more stable pooling and puts all samples on the same scale.
+Note, however, that scran pooling requires a prior clustering computed on the
+ALREADY merged object, and that clustering must exist before normalising;
+hence the preliminary step.
 
-Flujo:
+Workflow:
 
     adata = concat_samples(adatas)
-    adata = adata[adata.obs["qc_pass"]].copy()        # filtrado definitivo
+    adata = adata[adata.obs["qc_pass"]].copy()        # final filtering
 
-    preliminary_clusters(adata)                       # para el pooling
+    preliminary_clusters(adata)                       # for the pooling
     scran_size_factors(adata, cluster_key="scran_clusters")
-    apply_size_factors(adata)                         # deja las layers
-    compare_normalizations(adata)                     # mira antes de elegir
+    apply_size_factors(adata)                         # writes the layers
+    compare_normalizations(adata)                     # inspect before choosing
 
     adata.X = adata.layers["norm_scran_log1p"].copy()
 
-QUÉ MATRIZ SE NORMALIZA
------------------------
-La capa de counts que le pases (por defecto 'counts_cellbender'). scran espera
-counts, no algo ya normalizado. La salida de CellBender con el estimador MCKP
-son counts enteros, así que vale. Si prefieres normalizar sobre los crudos,
-pásale counts_layer='counts_raw' — pero entonces la descontaminación no llega
-a downstream.
+WHICH MATRIX IS NORMALISED
+--------------------------
+The counts layer passed in (by default 'counts_cellbender'). scran expects
+counts, not already normalised values. CellBender output with the MCKP
+estimator consists of integer counts, so it is suitable. To normalise the raw
+counts instead, pass counts_layer='counts_raw', but then the decontamination
+does not propagate downstream.
 
-MEMORIA
--------
-El paso a R es el cuello de botella: rpy2 necesita una matriz densa y
-genes x células en float64. Con 40k genes y 20k células son ~6.4 GB, que es
-justo lo que hace petar el kernel. Por eso se envía SOLO un subconjunto de
-genes expresados. No cambia el resultado: los size factors son por célula y
-scran ya descarta internamente los genes de baja expresión con min.mean.
+MEMORY
+------
+The transfer to R is the bottleneck: rpy2 needs a dense genes x cells
+matrix in float64. With 40k genes and 20k cells that is ~6.4 GB, which is
+exactly what crashes the kernel. For this reason ONLY a subset of expressed
+genes is sent. This does not change the result: size factors are per cell and
+scran already discards low-expression genes internally via min.mean.
 """
 
 from __future__ import annotations
@@ -55,21 +55,21 @@ def collect_ambient_profiles(
     key: str = "ambient_expression",
 ) -> pd.DataFrame:
     """
-    Perfiles de soup por muestra en un DataFrame genes x muestras.
+    Per-sample soup profiles in a genes x samples DataFrame.
  
-    Hay que sacarlos ANTES de concatenar: difieren entre muestras, así que
-    merge='same' los tira. Y merece la pena conservarlos: comparar el soup
-    entre timepoints te dice cuánto tejido se ha destrozado en cada uno, que
-    en un modelo de lesión es información, no ruido.
+    They must be extracted BEFORE concatenating: they differ between samples,
+    so merge='same' drops them. And they are worth keeping: comparing the soup
+    across timepoints indicates how much tissue was damaged in each one, which
+    in an injury model is information, not noise.
     """
     cols = {}
     for name, a in adatas.items():
         if key not in a.var.columns:
-            warnings.warn(f"{name}: no tiene var['{key}']")
+            warnings.warn(f"{name}: var['{key}'] not found")
             continue
         cols[name] = pd.Series(a.var[key].to_numpy(dtype=float), index=a.var_names)
     if not cols:
-        raise ValueError(f"Ninguna muestra tiene var['{key}']")
+        raise ValueError(f"No sample has var['{key}']")
     return pd.DataFrame(cols)
  
  
@@ -83,27 +83,27 @@ def concat_samples(
     verbose: bool = True,
 ) -> ad.AnnData:
     """
-    Concatena preservando var y uns, que es lo que ad.concat tira por defecto.
+    Concatenates while preserving var and uns, which ad.concat drops by default.
  
-    Tres cosas que hace y que a mano se olvidan:
+    Three things it does that are easily forgotten when done by hand:
  
     merge='same' / uns_merge='same'
-        Sin ellos pierdes var entera (entrez_id, seqname, gene_biotype...) y
-        uns['annotation'] con la procedencia del GTF. Los defaults de ad.concat
-        son None: descartar.
+        Without them the whole of var (entrez_id, seqname, gene_biotype...) is
+        lost, together with uns['annotation'] holding the GTF provenance. The
+        ad.concat defaults are None: discard.
     drop_obsm
-        X_umap_qc de cada muestra vive en un espacio propio. Concatenar esas
-        coordenadas produce un embedding sin sentido que parece válido. Fuera.
+        Each sample's X_umap_qc lives in its own space. Concatenating those
+        coordinates yields a meaningless embedding that looks valid. Dropped.
     prefix_obs
-        El cluster '0' de una muestra no tiene nada que ver con el '0' de otra.
-        Se prefijan con el nombre de la muestra para que no se fusionen.
+        Cluster '0' of one sample has nothing to do with cluster '0' of another.
+        They are prefixed with the sample name so that they are not merged.
     """
     names = list(adatas.keys())
     var_sets = [tuple(adatas[n].var_names) for n in names]
     if len(set(var_sets)) != 1:
         warnings.warn(
-            "Las muestras no comparten el mismo conjunto de genes; con join='outer' "
-            "los ausentes se rellenan con ceros. ¿Mismo GTF en todas?"
+            "The samples do not share the same gene set; with join='outer' "
+            "missing genes are filled with zeros. Same GTF for all of them?"
         )
  
     prepared = []
@@ -122,7 +122,7 @@ def concat_samples(
         join="outer", merge="same", uns_merge="same",
     )
  
-    # los perfiles de soup no sobreviven a merge='same': se guardan aparte
+    # soup profiles do not survive merge='same': they are stored separately
     try:
         out.varm["ambient_expression"] = collect_ambient_profiles(adatas).reindex(
             out.var_names).to_numpy(dtype=np.float32)
@@ -131,23 +131,23 @@ def concat_samples(
         pass
  
     if verbose:
-        print(f"[concat] {out.n_obs} células x {out.n_vars} genes de {len(names)} muestras")
+        print(f"[concat] {out.n_obs} cells x {out.n_vars} genes from {len(names)} samples")
         print(out.obs[sample_key].value_counts().to_string())
         kept = [c for c in ("entrez_id", "seqname", "gene_biotype", "gene_symbol")
                 if c in out.var.columns]
-        print(f"[concat] var conservado: {kept if kept else 'NADA — revisa merge='}")
+        print(f"[concat] var retained: {kept if kept else 'NOTHING — check merge='}")
         if not kept:
-            warnings.warn("No ha sobrevivido ninguna columna de anotación en var")
-        print(f"[concat] uns conservado: {sorted(out.uns)}")
+            warnings.warn("No annotation column in var has survived")
+        print(f"[concat] uns retained: {sorted(out.uns)}")
         if "ambient_expression" in out.varm:
-            print(f"[concat] perfiles de soup en varm['ambient_expression'] "
+            print(f"[concat] soup profiles in varm['ambient_expression'] "
                   f"({out.varm['ambient_expression'].shape})")
     return out
  
 
 
 # --------------------------------------------------------------------------
-# 1. clustering preliminar para el pooling de scran
+# 1. preliminary clustering for scran pooling
 # --------------------------------------------------------------------------
  
 def preliminary_clusters(
@@ -162,19 +162,19 @@ def preliminary_clusters(
     verbose: bool = True,
 ) -> ad.AnnData:
     """
-    Clustering rápido y desechable, solo para que scran agrupe células
-    parecidas al hacer el pooling.
+    Quick, disposable clustering, used only so that scran pools similar
+    cells together.
  
-    No es tu clustering final: se calcula sobre una normalización burda
-    (CPM + log1p) precisamente porque la buena todavía no existe. Es una
-    dependencia circular inevitable y está bien resuelta así — scran solo
-    necesita grupos aproximadamente homogéneos, no una anotación correcta.
+    This is not the final clustering: it is computed on a crude normalisation
+    (CPM + log1p) precisely because the good one does not exist yet. It is an
+    unavoidable circular dependency and is adequately resolved this way; scran
+    only needs approximately homogeneous groups, not a correct annotation.
  
     min_cells_per_cluster
-        computeSumFactors falla si un cluster tiene menos células que el mayor
-        tamaño de pool. En scranPY el default es sizes=arange(21,102,5), o sea
-        pools de hasta 101 células: por eso el mínimo aquí es 102, no 100.
-        Los clusters más pequeños se fusionan en uno solo, y se avisa.
+        computeSumFactors fails if a cluster has fewer cells than the largest
+        pool size. In scranPY the default is sizes=arange(21,102,5), i.e.
+        pools of up to 101 cells: hence the minimum here is 102, not 100.
+        Smaller clusters are merged into a single one, with a warning.
     """
     tmp = ad.AnnData(
         X=adata.layers[counts_layer].copy() if counts_layer in adata.layers else adata.X.copy(),
@@ -197,18 +197,18 @@ def preliminary_clusters(
         cl = cl.where(~cl.isin(small), "small_merged")
         n_small = int(sizes[small].sum())
         if verbose:
-            print(f"[scran] {len(small)} clusters con <{min_cells_per_cluster} "
-                  f"células fusionados en 'small_merged' ({n_small} células)")
+            print(f"[scran] {len(small)} clusters with <{min_cells_per_cluster} "
+                  f"cells merged into 'small_merged' ({n_small} cells)")
  
-        # Fusionar los pequeños entre sí no basta si solo había UNO: se queda
-        # igual de pequeño y el pooling sigue degradado. En ese caso se absorbe
-        # en el cluster grande más cercano en espacio PCA.
+        # Merging the small clusters together is not enough if there was only ONE:
+        # it stays just as small and the pooling remains degraded. In that case it
+        # is absorbed into the nearest large cluster in PCA space.
         if n_small < min_cells_per_cluster:
             big = cl.value_counts().drop("small_merged", errors="ignore")
             if big.empty:
                 raise ValueError(
-                    f"Todos los clusters tienen <{min_cells_per_cluster} células. "
-                    f"Baja 'resolution'."
+                    f"All clusters have <{min_cells_per_cluster} cells. "
+                    f"Lower 'resolution'."
                 )
             centroids = pd.DataFrame(pcs).groupby(cl.values).mean()
             target = (centroids.drop(index="small_merged")
@@ -216,26 +216,26 @@ def preliminary_clusters(
                       .pow(2).sum(axis=1).idxmin())
             cl = cl.replace("small_merged", target)
             if verbose:
-                print(f"[scran] 'small_merged' ({n_small}) seguía por debajo del "
-                      f"mínimo: absorbido en el cluster '{target}' "
-                      f"({int(big[target])} células)")
+                print(f"[scran] 'small_merged' ({n_small}) was still below the "
+                      f"minimum: absorbed into cluster '{target}' "
+                      f"({int(big[target])} cells)")
  
     adata.obs[key_added] = pd.Categorical(cl.values)
  
     if verbose:
         vc = adata.obs[key_added].value_counts()
-        print(f"[scran] {len(vc)} clusters para el pooling; "
-              f"tamaños {int(vc.min())}-{int(vc.max())}")
+        print(f"[scran] {len(vc)} clusters for the pooling; "
+              f"sizes {int(vc.min())}-{int(vc.max())}")
         if vc.min() < min_cells_per_cluster:
             warnings.warn(
-                f"Sigue habiendo un cluster de {int(vc.min())} células. Baja "
-                f"'resolution' o sube 'min_cells_per_cluster'."
+                f"There is still a cluster of {int(vc.min())} cells. Lower "
+                f"'resolution' or raise 'min_cells_per_cluster'."
             )
     return adata
  
  
 # --------------------------------------------------------------------------
-# 2. size factors con scran (vía rpy2)
+# 2. size factors with scran (via rpy2)
 # --------------------------------------------------------------------------
  
 def scran_size_factors(
@@ -254,43 +254,44 @@ def scran_size_factors(
     verbose: bool = True,
 ) -> ad.AnnData:
     """
-    Deconvolución de Lun et al. (computeSumFactors), por dos vías.
+    Deconvolution of Lun et al. (computeSumFactors), via two routes.
  
     backend
-        'scranPY'  -> sfortma2/scranPY, que implementa el algoritmo completo en
-                      Python (pooling + sistema lineal + QR/CVXPY). Sin R.
-        'r'        -> scran de Bioconductor vía rpy2.
+        'scranPY'  -> sfortma2/scranPY, which implements the full algorithm in
+                      Python (pooling + linear system + QR/CVXPY). No R.
+        'r'        -> Bioconductor scran via rpy2.
  
-        No confundir con 'scranpy' de BiocPy/libscran, que es otro paquete con
-        nombre casi idéntico: ése NO trae computeSumFactors y normaliza por
-        tamaño de librería (para eso está library_size_factors()).
+        Not to be confused with 'scranpy' from BiocPy/libscran, a different
+        package with an almost identical name: it does NOT provide
+        computeSumFactors and normalises by library size (that is what
+        library_size_factors() is for).
  
-    En ambos casos el cuello de botella es el mismo: las dos vías necesitan la
-    matriz DENSA, así que el subconjunto de genes no es opcional en datasets
-    grandes.
+    In both cases the bottleneck is the same: both routes need the DENSE
+    matrix, so the gene subset is not optional on large
+    datasets.
  
     min_cells_expressed / max_genes
-        Solo entran al cálculo los genes expresados en al menos N células, y
-        como mucho los 'max_genes' de mayor expresión media.
+        Only genes expressed in at least N cells enter the computation, and
+        at most the 'max_genes' with the highest mean expression.
  
-        MATIZ, porque antes te lo vendí demasiado fuerte: esto NO es
-        exactamente idéntico a usar todos los genes. La deconvolución divide
-        por el tamaño de librería y toma medianas de ratios, así que el
-        conjunto de genes entra en el cálculo. Es una buena aproximación
-        porque los genes excluidos aportan una fracción ínfima de los counts y
-        los habría descartado igualmente min_mean — pero es aproximación, no
-        identidad. Con max_genes=None se usan todos, si te cabe en memoria.
+        CAVEAT, because this was previously overstated: this is NOT
+        exactly identical to using all genes. The deconvolution divides
+        by library size and takes medians of ratios, so the gene set
+        enters the computation. It is a good approximation because the
+        excluded genes contribute a tiny fraction of the counts and would
+        have been discarded by min_mean anyway, but it is an approximation,
+        not an identity. With max_genes=None all genes are used, memory permitting.
  
-    Devuelve los size factors en obs[key_added] y valida que sean positivos:
-    scran puede dar factores <= 0 en células de muy baja calidad, y eso
-    produce infinitos silenciosos al dividir.
+    Stores the size factors in obs[key_added] and checks that they are positive:
+    scran can yield factors <= 0 for very low-quality cells, and that
+    produces silent infinities on division.
     """
     if backend not in ("scranPY", "r"):
-        raise ValueError("backend debe ser 'scranPY' o 'r'")
+        raise ValueError("backend must be 'scranPY' or 'r'")
  
     if cluster_key not in adata.obs:
         raise ValueError(
-            f"No hay obs['{cluster_key}']; ejecuta preliminary_clusters() antes"
+            f"obs['{cluster_key}'] not found; run preliminary_clusters() first"
         )
  
     X = adata.layers[counts_layer] if counts_layer in adata.layers else adata.X
@@ -306,16 +307,16 @@ def scran_size_factors(
  
     if keep.sum() < 500:
         raise ValueError(
-            f"Solo {int(keep.sum())} genes pasan el filtro; scran necesita más. "
-            f"Baja min_cells_expressed."
+            f"Only {int(keep.sum())} genes pass the filter; scran needs more. "
+            f"Lower min_cells_expressed."
         )
  
     if verbose:
         gb = int(keep.sum()) * adata.n_obs * 8 / 1e9
-        print(f"[scran] {int(keep.sum())} genes x {adata.n_obs} células, "
-              f"densa: {gb:.2f} GB")
+        print(f"[scran] {int(keep.sum())} genes x {adata.n_obs} cells, "
+              f"dense: {gb:.2f} GB")
         if gb > 8:
-            warnings.warn(f"{gb:.1f} GB en denso; baja max_genes si peta")
+            warnings.warn(f"{gb:.1f} GB when dense; lower max_genes if it crashes")
  
     clusters = adata.obs[cluster_key].astype(str).to_numpy()
  
@@ -328,7 +329,7 @@ def scran_size_factors(
                 "pip install git+https://github.com/sfortma2/scranPY.git"
             ) from e
  
-        # scranPY exige X densa y lee los clusters por NOMBRE de columna
+        # scranPY requires a dense X and reads the clusters by column NAME
         tmp = ad.AnnData(
             X=np.asarray(X[:, keep].todense(), dtype=np.float64),
             obs=pd.DataFrame({cluster_key: adata.obs[cluster_key].astype("category").values},
@@ -340,7 +341,7 @@ def scran_size_factors(
             min_mean=min_mean,
             max_size=max_cluster_size,
             algorithm=algorithm,
-            normalize_counts=False,     # NO tocar X: eso lo hace apply_size_factors
+            normalize_counts=False,     # do NOT modify X: apply_size_factors does that
             log1p=False,
             plotting=do_plot,
             stopwatch=verbose,
@@ -359,7 +360,7 @@ def scran_size_factors(
         return adata
  
     # -------------------------------------------------------------- rpy2 / R
-    mat = np.asarray(X[:, keep].todense(), dtype=np.float64).T   # R: genes x células
+    mat = np.asarray(X[:, keep].todense(), dtype=np.float64).T   # R: genes x cells
     try:
         import anndata2ri  # noqa: F401
         from rpy2.robjects import numpy2ri, r
@@ -367,7 +368,7 @@ def scran_size_factors(
         import rpy2.robjects as ro
     except ImportError as e:
         raise ImportError(
-            "Hace falta rpy2 (y R con scran). "
+            "rpy2 (and R with scran) is required. "
             "conda install -c conda-forge rpy2 bioconductor-scran"
         ) from e
  
@@ -391,7 +392,7 @@ def scran_size_factors(
  
     if sf.shape[0] != adata.n_obs:
         raise ValueError(
-            f"scran devolvió {sf.shape[0]} size factors para {adata.n_obs} células"
+            f"scran returned {sf.shape[0]} size factors for {adata.n_obs} cells"
         )
  
     validate_size_factors(sf, verbose=verbose)
@@ -407,33 +408,33 @@ def scran_size_factors(
 def validate_size_factors(sf: np.ndarray, low_warn: float = 0.1,
                           verbose: bool = True) -> None:
     """
-    scran puede devolver factores <= 0 en células de muy baja calidad. Dividir
-    por ellos da infinitos o negativos que luego aparecen como NaN a mitad del
-    pipeline, muy lejos de aquí. Se comprueba en el sitio.
+    scran can return factors <= 0 for very low-quality cells. Dividing by
+    them gives infinities or negative values that later surface as NaN midway
+    through the pipeline, far from here. The check is done on the spot.
     """
     bad = ~np.isfinite(sf) | (sf <= 0)
     if bad.any():
         raise ValueError(
-            f"{int(bad.sum())} size factors no positivos o no finitos. Suele "
-            f"significar células con contenido casi nulo que han sobrevivido al "
-            f"QC: revísalas y fíltralas antes de normalizar."
+            f"{int(bad.sum())} size factors are non-positive or non-finite. This usually "
+            f"indicates cells with almost no content that have survived "
+            f"QC: inspect them and filter them out before normalising."
         )
     q = np.quantile(sf, [0, .01, .25, .5, .75, .99, 1])
     if verbose:
         print(f"[scran] size factors  min={q[0]:.3f}  1%={q[1]:.3f}  "
-              f"mediana={q[3]:.3f}  99%={q[5]:.3f}  max={q[6]:.3f}")
+              f"median={q[3]:.3f}  99%={q[5]:.3f}  max={q[6]:.3f}")
  
-    # La cola BAJA es la peligrosa y es asimétrica: normalizar divide, así que
-    # un size factor de 0.02 multiplica los counts de esa célula por 50. Esas
-    # células salen con valores enormes y ruidosos y pueden formar su propio
-    # cluster espurio. La cola alta solo comprime, que es benigno.
+    # The LOW tail is the dangerous one, and the effect is asymmetric: normalising
+    # divides, so a size factor of 0.02 multiplies that cell's counts by 50. Those
+    # cells end up with huge, noisy values and can form their own spurious
+    # cluster. The high tail only compresses, which is benign.
     n_low = int((sf < low_warn).sum())
     if n_low:
         warnings.warn(
-            f"{n_low} células con size factor < {low_warn}: al normalizar sus "
-            f"counts se amplifican hasta {1 / max(q[0], 1e-9):.0f}x. Suelen ser "
-            f"células de bajo contenido que han pasado el QC. Míralas con "
-            f"size_factor_report() antes de seguir."
+            f"{n_low} cells with size factor < {low_warn}: on normalisation their "
+            f"counts are amplified up to {1 / max(q[0], 1e-9):.0f}x. These are usually "
+            f"low-content cells that passed QC. Inspect them with "
+            f"size_factor_report() before continuing."
         )
  
  
@@ -446,25 +447,25 @@ def library_size_factors(
     verbose: bool = True,
 ) -> ad.AnnData:
     """
-    Size factors por tamaño de librería, centrados. Alternativa a scran SIN R.
+    Library-size size factors, centred. An alternative to scran WITHOUT R.
  
-    OJO con la confusión habitual: `scranpy` NO implementa computeSumFactors.
-    Su normalización de RNA usa las sumas por columna ("If None, this defaults
-    to the column sums of the count matrix"), y su único cálculo propio de
-    factores, compute_clrm1_factors, es para ADT. El pooling con deconvolución
-    de Lun et al. — lo que distingue a scran de una normalización por library
-    size — solo está en el paquete de R.
+    BEWARE of the usual confusion: `scranpy` does NOT implement computeSumFactors.
+    Its RNA normalisation uses the column sums ("If None, this defaults
+    to the column sums of the count matrix"), and its only factor computation
+    of its own, compute_clrm1_factors, is for ADT. Pooling with the deconvolution
+    of Lun et al. (what distinguishes scran from a library-size
+    normalisation) is only available in the R package.
  
-    Así que esto es library size, se llame como se llame. Con use_scranpy=True
-    el centrado lo hace scranpy (mode='lowest', igual que su workflow); con
-    False se centra a la media, que es lo que hace scran en R. La diferencia
-    es un factor global de escala, irrelevante tras el log.
+    So this is library size, whatever it is called. With use_scranpy=True
+    the centring is done by scranpy (mode='lowest', as in its workflow); with
+    False it is centred on the mean, which is what scran does in R. The difference
+    is a global scale factor, irrelevant after the log.
  
     block_key
-        Con scranpy, centra por bloque (p.ej. 'gsm') en vez de globalmente.
-        Úsalo solo si sabes por qué: centrar por muestra elimina diferencias
-        REALES de contenido de RNA entre muestras, que en un timecourse pueden
-        ser biología.
+        With scranpy, centres per block (e.g. 'gsm') instead of globally.
+        Use only with a clear reason: centring per sample removes REAL
+        differences in RNA content between samples, which in a time course
+        may be biology.
     """
     X = adata.layers[counts_layer] if counts_layer in adata.layers else adata.X
     sf = np.asarray(sp.csr_matrix(X).sum(axis=1)).ravel().astype(np.float64)
@@ -472,8 +473,8 @@ def library_size_factors(
     if (sf <= 0).any():
         n = int((sf <= 0).sum())
         raise ValueError(
-            f"{n} células con 0 counts en '{counts_layer}'. Fíltralas antes de "
-            f"normalizar: su size factor no está definido."
+            f"{n} cells with 0 counts in '{counts_layer}'. Filter them out before "
+            f"normalising: their size factor is undefined."
         )
  
     how = "media"
@@ -486,7 +487,7 @@ def library_size_factors(
                 sf, block=block, mode="per-block" if block is not None else "lowest")
             how = f"scranpy ({'per-block' if block is not None else 'lowest'})"
         except ImportError:
-            warnings.warn("scranpy no está instalado; centro a la media")
+            warnings.warn("scranpy is not installed; centring on the mean")
             sf = sf / sf.mean()
     else:
         sf = sf / sf.mean()
@@ -497,8 +498,8 @@ def library_size_factors(
         "counts_layer": counts_layer, "centering": how, "block_key": block_key,
     }
     if verbose:
-        print(f"[libsize] size factors por library size, centrados por {how}")
-        print("[libsize] NO es computeSumFactors: sin pooling ni deconvolución")
+        print(f"[libsize] library-size size factors, centred by {how}")
+        print("[libsize] this is NOT computeSumFactors: no pooling and no deconvolution")
     return adata
  
  
@@ -510,19 +511,19 @@ def size_factor_report(
     verbose: bool = True,
 ) -> pd.DataFrame:
     """
-    Compara las células de size factor bajo con el resto.
+    Compares cells with a low size factor against the rest.
  
-    Un size factor pequeño no es un problema del normalizador: es una célula
-    con muy poco contenido que ha sobrevivido al QC. Al dividir por él sus
-    counts se amplifican, y esas células acaban dominando la varianza y
-    formando clusters que no existen.
+    A small size factor is not a problem of the normaliser: it is a cell
+    with very little content that has survived QC. Dividing by it amplifies
+    its counts, and those cells end up dominating the variance and
+    forming clusters that do not exist.
  
-    Si la fila 'sf_bajo' tiene muchos menos counts y genes que 'resto', vuelve
-    al QC y ponles un min_log1p_counts / min_log1p_genes. Es más limpio que
-    parchear los size factors después.
+    If the 'sf_bajo' row has far fewer counts and genes than 'resto', go back
+    to QC and set a min_log1p_counts / min_log1p_genes. That is cleaner than
+    patching the size factors afterwards.
     """
     if key not in adata.obs:
-        raise ValueError(f"No hay obs['{key}']")
+        raise ValueError(f"obs['{key}'] not found")
     if cols is None:
         cols = ["n_counts_raw", "n_counts_cellbender", "log1p_total_counts",
                 "log1p_n_genes_by_counts", "pct_counts_mt", "nuclear_frac",
@@ -537,13 +538,13 @@ def size_factor_report(
         print(out.to_string())
         n_low = int((grp == "sf_bajo").sum())
         if n_low:
-            print(f"\n[sf] {n_low} células ({100 * n_low / adata.n_obs:.2f}%) "
-                  f"con size factor < {low}")
+            print(f"\n[sf] {n_low} cells ({100 * n_low / adata.n_obs:.2f}%) "
+                  f"with size factor < {low}")
     return out
  
  
 # --------------------------------------------------------------------------
-# 3. aplicar y comparar
+# 3. apply and compare
 # --------------------------------------------------------------------------
  
 def apply_size_factors(
@@ -554,14 +555,14 @@ def apply_size_factors(
     verbose: bool = True,
 ) -> ad.AnnData:
     """
-    Deja tres normalizaciones como layers, sin tocar X. Eliges después.
+    Stores three normalisations as layers, without touching X. The choice is made later.
  
-        norm_log1p        log1p de los counts sin escalar (control)
+        norm_log1p        log1p of the unscaled counts (control)
         norm_scran_log1p  log(1 + x / size_factor)
-        norm_cpm_log1p    log1p de CPM, la referencia habitual
+        norm_cpm_log1p    log1p of CPM, the usual reference
  
-    X se queda como está a propósito: que la elección sea un paso explícito
-    tuyo (`adata.X = adata.layers[...]`) y no un efecto lateral.
+    X is deliberately left as it is, so that the choice is an explicit step
+    by the user (`adata.X = adata.layers[...]`) and not a side effect.
     """
     X = adata.layers[counts_layer] if counts_layer in adata.layers else adata.X
     X = sp.csr_matrix(X, dtype=np.float32)
@@ -577,7 +578,7 @@ def apply_size_factors(
         scaled.data = np.log1p(scaled.data)
         adata.layers["norm_scran_log1p"] = scaled
     elif verbose:
-        print(f"[norm] sin obs['{key}']: no se genera la capa de scran")
+        print(f"[norm] obs['{key}'] not found: the scran layer is not generated")
  
     cpm = sc.pp.normalize_total(
         ad.AnnData(X=X.copy()), target_sum=target_sum, inplace=False)["X"]
@@ -587,7 +588,7 @@ def apply_size_factors(
  
     if verbose:
         print(f"[norm] layers: {[k for k in adata.layers if k.startswith('norm_')]}")
-        print("[norm] X NO se ha tocado; elige con adata.X = adata.layers['...']")
+        print("[norm] X has NOT been modified; choose with adata.X = adata.layers['...']")
     return adata
  
  
@@ -599,26 +600,26 @@ def compare_normalizations(
     verbose: bool = True,
 ) -> pd.DataFrame:
     """
-    Compara las normalizaciones por lo único que importa aquí: si la
-    profundidad de secuenciación sigue dominando después.
+    Compares the normalisations on the only thing that matters here: whether
+    sequencing depth still dominates afterwards.
  
-    'pc1_vs_depth' es la correlación de Spearman entre PC1 y los counts crudos.
-    Ése es el modo de fallo real: si la profundidad domina, sale como primer
-    componente principal y te estructura el UMAP entero. Cerca de 0 = bien.
+    'pc1_vs_depth' is the Spearman correlation between PC1 and the raw counts.
+    That is the real failure mode: if depth dominates, it comes out as the first
+    principal component and structures the entire UMAP. Close to 0 = good.
  
-    OJO con la tentación de medirlo sobre la SUMA de la fila normalizada: esa
-    suma depende sobre todo de cuántos genes se detectan, que correlaciona con
-    la profundidad aunque la normalización sea perfecta. Da ~1 siempre y no
-    distingue nada. Por eso se mide sobre PC1.
+    BEWARE of the temptation to measure it on the SUM of the normalised row: that
+    sum depends mostly on how many genes are detected, which correlates with
+    depth even when the normalisation is perfect. It is always ~1 and does not
+    discriminate anything. That is why it is measured on PC1.
  
-    Con group_key (p.ej. 'gsm') añade la dispersión ENTRE muestras de la suma
-    normalizada: si una muestra queda sistemáticamente por encima, no están en
-    la misma escala y eso se confundirá con efecto de batch.
+    With group_key (e.g. 'gsm'), the BETWEEN-sample spread of the normalised sum
+    is added: if one sample sits systematically higher, the samples are not on
+    the same scale and this will be confounded with a batch effect.
     """
     if layers is None:
         layers = [k for k in adata.layers if k.startswith("norm_")]
     if not layers:
-        raise ValueError("No hay layers de normalización; ejecuta apply_size_factors()")
+        raise ValueError("No normalisation layers found; run apply_size_factors()")
  
     from scipy.stats import spearmanr
  
@@ -630,7 +631,7 @@ def compare_normalizations(
     for lay in layers:
         s = np.asarray(adata.layers[lay].sum(axis=1)).ravel()
  
-        # PC1 sobre esta normalización: el modo de fallo que importa
+        # PC1 on this normalisation: the failure mode that matters
         tmp = ad.AnnData(X=sp.csr_matrix(adata.layers[lay], dtype=np.float32))
         sc.pp.pca(tmp, n_comps=min(n_comps_pca, min(tmp.shape) - 1),
                   random_state=0)
@@ -646,7 +647,7 @@ def compare_normalizations(
         }
         if group_key is not None and group_key in adata.obs:
             per = pd.Series(s).groupby(adata.obs[group_key].to_numpy()).mean()
-            row["spread_entre_muestras"] = round(
+            row["spread_across_samples"] = round(
                 float(per.max() / per.min()) if per.min() > 0 else np.nan, 3)
         rows.append(row)
  
@@ -654,11 +655,11 @@ def compare_normalizations(
     if verbose:
         print(out.to_string())
         best = out["pc1_vs_depth"].idxmin()
-        print(f"\n[norm] PC1 menos contaminado por la profundidad: {best} "
+        print(f"\n[norm] PC1 least contaminated by depth: {best} "
               f"(|rho| = {out.loc[best, 'pc1_vs_depth']:.3f})")
         if out.loc[best, "pc1_vs_depth"] > 0.5:
-            print("[norm] AVISO: incluso la mejor deja PC1 muy ligado a la "
-                  "profundidad. Revisa si quedan células de muy baja calidad.")
-        print("[norm] Es un criterio necesario, no suficiente: mide que la "
-              "profundidad ya no domina, no que la biología esté bien escalada.")
+            print("[norm] WARNING: even the best one leaves PC1 strongly tied to "
+                  "depth. Check whether very low-quality cells remain.")
+        print("[norm] This is a necessary criterion, not a sufficient one: it shows that "
+              "depth no longer dominates, not that the biology is correctly scaled.")
     return out

@@ -1,16 +1,18 @@
-[build-system]
+[build-system
+]
 requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
-[project]
-name = "kranocito"
+[project
+]
+name = "kranocyte"
 version = "2.0.0"
-description = "Caracterizacion de poblaciones de kranocitos y FAPs en musculo esqueletico de raton"
+description = "Characterisation of kranocyte and FAP populations in mouse skeletal muscle"
 requires-python = ">=3.11,<3.12"
 readme = "README.md"
 
-# Las dependencias se declaran en environment.yml y se fijan en el lock.
-# Aqui solo lo imprescindible para que el paquete importe.
+# Dependencies are declared in environment.yml and pinned in the lock file.
+# Only what the package strictly needs in order to import is listed here.
 dependencies = [
     "numpy",
     "pandas",
@@ -20,9 +22,11 @@ dependencies = [
     "matplotlib",
 ]
 
-[tool.setuptools.packages.find]
+[tool.setuptools.packages.find
+]
 where = ["src"]
-include = ["kranocito*"]
+include = ["kranocyte*"]
 
-[tool.setuptools.package-data]
-kranocito = ["py.typed"]
+[tool.setuptools.package-data
+]
+kranocyte = ["py.typed"]

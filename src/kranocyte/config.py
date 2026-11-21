@@ -4,8 +4,8 @@ Project paths and constants.
 Replaces ``pyfuncs.common_vars``, which hard-coded ``BASE_DIR`` to one machine's
 absolute path. The root is now resolved in this order:
 
-1. the ``KRANOCITO_ROOT`` environment variable, if set;
-2. ``config/config.env`` in the repository, if present (key ``KRANOCITO_ROOT``);
+1. the ``KRANOCYTE_ROOT`` environment variable, if set;
+2. ``config/config.env`` in the repository, if present (key ``KRANOCYTE_ROOT``);
 3. the position of this package, walking up until the repository root is found.
 
 The same code therefore works on the workstation and on the HPC without edits, which
@@ -35,14 +35,14 @@ def _from_env_file(path: Path) -> str | None:
         return None
     for line in path.read_text().splitlines():
         line = line.strip()
-        if line.startswith("KRANOCITO_ROOT"):
+        if line.startswith("KRANOCYTE_ROOT"):
             _, _, value = line.partition("=")
             return value.strip().strip('"').strip("'") or None
     return None
 
 
 def _discover_root() -> Path:
-    env = os.environ.get("KRANOCITO_ROOT")
+    env = os.environ.get("KRANOCYTE_ROOT")
     if env:
         return _abs(Path(env).expanduser())
 
@@ -52,7 +52,7 @@ def _discover_root() -> Path:
         if value:
             return _abs(Path(value).expanduser())
         # Repository-root markers. BOTH layouts are accepted: the current one
-        # (src/pyfuncs, src/notebooks_v2) and the migration target
+        # (src/<package>, src/notebooks_v2) and the migration target
         # (pyproject.toml + notebooks/), so the same code works before and after.
         if (parent / "pyproject.toml").is_file() and (parent / "notebooks").is_dir():
             return _abs(parent)
@@ -60,7 +60,7 @@ def _discover_root() -> Path:
             return _abs(parent)
 
     raise RuntimeError(
-        "Cannot find the project root. Set KRANOCITO_ROOT or create "
+        "Cannot find the project root. Set KRANOCYTE_ROOT or create "
         "config/config.env from config/config.example.env."
     )
 

@@ -14,7 +14,7 @@ denervation, all reprocessed uniformly from FASTQ. Details in `README.md`.
 - **Python 3.11** — pinned, not chosen. Eight dependencies no longer publish compatible releases
   (see the warning in `README.md`). The authoritative record of the environment is the
   **lockfile**.
-- Conda environment `kranocito`, described in `environment.yml` and pinned in the lock.
+- Conda environment `kranocyte`, described in `environment.yml` and pinned in the lock.
   Creation: `conda env create -f environment.yml && pip install -e .`
 - Main stack: scanpy, anndata, triku, harmonypy, scvelo, cellrank, scFates, palantir, phate,
   liana, CellPhoneDB, gseapy, scranPY + scranpy, rpy2 + bioconductor-scran.
@@ -35,7 +35,7 @@ denervation, all reprocessed uniformly from FASTQ. Details in `README.md`.
 
 | Path | Contents | Do the guidelines apply? |
 |---|---|---|
-| `src/kranocito/` | project package | yes |
+| `src/kranocyte/` | project package | yes |
 | `workflow/` | bash: FASTQ -> matrices | yes (`shellcheck`) |
 | `notebooks/` | analysis, numbered | yes, with the exceptions in §22 |
 | `config/` | configuration and `samples.tsv` | yes |
@@ -48,7 +48,7 @@ denervation, all reprocessed uniformly from FASTQ. Details in `README.md`.
 
 ## 4. Domain vocabulary
 
-Population names and their palette are declared in `src/kranocito/cell_types.py`, the single
+Population names and their palette are declared in `src/kranocyte/cell_types.py`, the single
 source: `DICT_MARKERS_*`, `DICT_RENAMING`, `PALETTE_CELL_TYPE` and their integration variants.
 
 Underlying decision: what the project called *kranocytes* was renamed as FAP subpopulations
@@ -76,7 +76,7 @@ in the lab experiments, so the integration is done a posteriori.
 - Quantification: `--soloFeatures GeneFull Velocyto`, `--soloMultiMappers EM`,
   `EmptyDrops_CR`. The notebooks load `GeneFull/raw/UniqueAndMult-EM.mtx`.
 - Normalization: scran size factors by deconvolution (Lun et al.), then log1p.
-- Seed: `SEED` in `src/kranocito/config.py`.
+- Seed: `SEED` in `src/kranocyte/config.py`.
 
 ## 7. Interfaces
 

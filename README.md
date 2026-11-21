@@ -1,4 +1,4 @@
-# kranocito
+# kranocyte
 
 Characterization of kranocyte and FAP populations in mouse skeletal muscle by scRNA-seq. The
 project combines one in-house dataset with four public datasets, all reprocessed uniformly.
@@ -8,7 +8,7 @@ project combines one in-house dataset with four public datasets, all reprocessed
 | Directory | What it holds |
 |---|---|
 | `workflow/` | FASTQ to matrices: download, STAR index and STARsolo for the five datasets |
-| `src/kranocito/` | the project package: QC, normalization, characterization, DEGs, ontology, interactions, trajectories |
+| `src/kranocyte/` | the project package: QC, normalization, characterization, DEGs, ontology, interactions, trajectories |
 | `notebooks/` | the analysis, numbered: `0*` per-dataset processing, `1AA` characterization, `2*` pseudotemporal dynamics, `3*` interactions, `4` integration, `9` deposit preparation |
 | `config/` | configuration and the `samples.tsv` of each dataset |
 | `data/` | `raw`, `external`, `interim`, `processed` — outside git |
@@ -20,8 +20,8 @@ You need Docker or Apptainer configured with NVIDIA support. CellBender uses the
 CPU, but much more slowly), and STARsolo runs in a container.
 
 ```bash
-conda env create -f environment.yml      # or: conda-lock install --name kranocito conda-lock.yml
-conda activate kranocito
+conda env create -f environment.yml      # or: conda-lock install --name kranocyte conda-lock.yml
+conda activate kranocyte
 pip install -e .
 ```
 

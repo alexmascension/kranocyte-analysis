@@ -95,7 +95,7 @@ together, in a single invocation. This matters especially for Song (12–16 runs
 per GSM) and Nicoletti (8 runs per GSM): it is equivalent to merging the runs
 logically, without concatenating files.
 
-**In-house.** The FASTQ files are local: `<muestra>_L00N_R{1,2}_001.fastq.gz`,
+**In-house.** The FASTQ files are local: `<sample>_L00N_R{1,2}_001.fastq.gz`,
 with four pairs per sample (2 flowcells × 2 lanes, renamed `L001`–`L004`;
 see the table above). On each run they are checked against `md5sums.txt`,
 which lives in the same directory and plays the role of the ENA MD5s. The four
@@ -323,9 +323,9 @@ DATA_ROOT/
     └── inhouse_ARAUZO_03/
         ├── samples.tsv
         ├── fastq/                                # default; or INHOUSE_FASTQ_DIR
-        │   ├── <muestra>_L00{1..4}_R{1,2}_001.fastq.gz
+        │   ├── <sample>_L00{1..4}_R{1,2}_001.fastq.gz
         │   └── md5sums.txt
-        └── results_STAR/<muestra>/
+        └── results_STAR/<sample>/
             ├── Aligned.sortedByCoord.out.bam
             ├── Log.final.out, Log.out, Log.progress.out, SJ.out.tab
             └── Solo.out/{Gene,GeneFull,SJ,Velocyto}/{raw,filtered}/   # SJ raw/ only
@@ -343,7 +343,7 @@ completed-sample detection either.
 |---|---|
 | `common/reference/`, `common/whitelists/`, `common/containers/` | `data/external/` |
 | In-house FASTQ and `md5sums.txt` | `data/raw/inhouse_ARAUZO_03/` |
-| In-house `results_STAR/<muestra>/` | `data/interim/inhouse_ARAUZO_03/<muestra>/` |
+| In-house `results_STAR/<sample>/` | `data/interim/inhouse_ARAUZO_03/<sample>/` |
 | `samples.tsv` | `config/samples/<id>.tsv` |
 
 The short repository identifiers (`oprescu_2020`, …) do not carry the GSE suffix
@@ -387,7 +387,7 @@ All scripts can be rerun:
 
 ## What is on disk today and what must be re-downloaded
 
-Verified on 2026-11-19 in `/mnt/data/Proyectos/kranocito/data/`:
+Verified on 2026-11-19 in `/mnt/data/Proyectos/kranocyte/data/`:
 
 | Item | On disk? | Where | To reproduce |
 |---|---|---|---|
@@ -472,7 +472,7 @@ Found during unification. Only item 1 has been fixed in the code (in `lib/common
 
 ## What the cluster keeps
 
-The copy at `/data/alexmascension/SCRATCH_COPY/kranocito` on Hyperion holds
+The copy at `/data/alexmascension/SCRATCH_COPY/kranocyte` on Hyperion holds
 what is no longer available locally and avoids rebuilding it:
 
 | Artifact | Where | Why it matters |

@@ -12,7 +12,7 @@ DICT_MARKERS_MAJOR_POPULATIONS = {
 
 DICT_MARKERS_MAJOR_POPULATIONS = {
  
-    # ---------------- las que ya tenias (sin tocar) ----------------
+    # ---------------- the ones you already had (unchanged) ----------------
     'Kranocyte': ['Rasgrp2', 'Tenm2', 'Inpp4b', 'Foxd2os', 'Malt1', 'Gfra2', 'Shisa3', 'Thrsp',
                   'Gpld1', 'Smim41', 'Plxdc1', 'Dlk1', 'Fetub', 'Saa1', 'Gria1', 'Greb1',
                   'Col9a2', 'Gli1', 'Cst6'],
@@ -32,9 +32,9 @@ DICT_MARKERS_MAJOR_POPULATIONS = {
     'Immune': ['Ptprc', 'Lyz2', 'Tyrobp', 'Fcer1g', 'Laptm5', 'Ctss', 'Ctsc', 'C1qb',
                'Ccl4', 'Ckb', 'Iqgap1', 'Ehd4'],
  
-    # ---------------- poblaciones que faltaban ----------------
+    # ---------------- populations that were missing ----------------
  
-    # Mural / vascular no-endotelial
+    # Mural / non-endothelial vascular
     'Pericyte': ['Rgs5', 'Kcnj8', 'Abcc9', 'Pdgfrb', 'Notch3', 'Vtn', 'Higd1b',
                  'Ndufa4l2', 'Cspg4', 'Colec11'],                       # [NIC][SOU][OPR]
  
@@ -45,24 +45,24 @@ DICT_MARKERS_MAJOR_POPULATIONS = {
              'Cd248', 'Des'],                                            # [NIC] smooth muscle-mesenchymal cells
  
     'Lymphatic_EC': ['Prox1', 'Lyve1', 'Pdpn', 'Flt4', 'Ccl21a', 'Mmrn1', 'Reln',
-                     'Nts', 'Fgl2', 'Thy1'],                             # subtipo EC, ver seccion 5
+                     'Nts', 'Fgl2', 'Thy1'],                             # EC subtype, see section 5
  
-    # Linaje neural / glial
+    # Neural / glial lineage
     'Glial_Schwann': ['Plp1', 'Mpz', 'Sox10', 'S100b', 'Mbp', 'Ptn', 'Kcna1', 'Cdh19',
                       'Ngfr', 'Mal'],                                    # [NIC][SOU][SONG]
  
-    # # Miofibra / nucleos musculares
+    # # Myofiber / muscle nuclei
     # 'Myonuclei': ['Acta1', 'Ckm', 'Tnnt3', 'Tnnc2', 'Mylpf', 'Actn3', 'Neb', 'Ttn',
     #               'Atp2a1', 'Mb'],                                       # [OPR][NIC]
  
     # 'Myotenocyte': ['Tnnc2', 'Scx', 'Col22a1', 'Ankrd1', 'Tnmd', 'Mkx', 'Acta1',
-    #                 'Csrp3', 'Thbs4'],                                   # [NIC] union miotendinosa
+    #                 'Csrp3', 'Thbs4'],                                   # [NIC] myotendinous junction
  
-    # # Mesenquimal terminal
+    # # Terminal mesenchymal
     # 'Adipocyte': ['Adipoq', 'Plin1', 'Cfd', 'Fabp4', 'Lep', 'Car3', 'Cidec', 'Retn',
     #               'Lpl', 'Scd1'],                                        # [SOU]
  
-    # Inmunes que no separabas
+    # Immune populations you were not separating
     'Neutrophil': ['S100a8', 'S100a9', 'Retnlg', 'Csf3r', 'Il1r2', 'Mmp9', 'Lcn2',
                    'Cxcr2', 'Msrb1', 'Wfdc21'],                          # [OPR][SOU]
  
@@ -78,7 +78,7 @@ DICT_MARKERS_MAJOR_POPULATIONS = {
     'Dendritic': ['Cd74', 'H2-Ab1', 'H2-Aa', 'H2-Eb1', 'Cd209a', 'Napsa', 'Flt3',
                   'Tmem176a', 'Tmem176b', 'Ccr7'],                       # [OPR][SOU]
  
-    # # Poblaciones raras / contexto especifico (isquemia, amputacion, osificacion)
+    # # Rare populations / specific context (ischemia, amputation, ossification)
     # 'Erythrocyte': ['Hba-a1', 'Hba-a2', 'Hbb-bs', 'Hbb-bt', 'Alas2', 'Slc4a1',
     #                 'Bpgm', 'Snca'],                                     # [SOU]
  
@@ -86,7 +86,7 @@ DICT_MARKERS_MAJOR_POPULATIONS = {
     #                'Car2', 'Src'],                                       # [SOU]
  
     # 'Epithelial_basal': ['Krt5', 'Krt14', 'Krt10', 'Epcam', 'Sfn', 'Dsp', 'Krt17',
-    #                      'Col17a1'],                                     # [SOU][SONG] (piel en amputaciones)
+    #                      'Col17a1'],                                     # [SOU][SONG] (skin in amputations)
 }
 
 
@@ -191,7 +191,7 @@ DICT_RENAMING = {
 
 
 PALETTE_CELL_TYPE = {
-    # ---- Minor (más oscuros) ----
+    # ---- Minor (darker) ----
     # FAP (7)
     'FAP.1':"#A1D9F0",
     'FAP.2' :"#4C92AD",
@@ -257,7 +257,7 @@ DICT_RENAMING_INTEGRATION = {
 
 
 PALETTE_CELL_TYPE_INTEGRATION = {
-    # ---- Minor (más oscuros) ----
+    # ---- Minor (darker) ----
     # FAP (7)
     'FAP.1':"#A1D9F0",
     'FAP.2' :"#4C92AD",

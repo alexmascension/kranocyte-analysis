@@ -1,63 +1,63 @@
 """
-Comunicación célula-célula: CellPhoneDB v5 (método estadístico) y LIANA+.
+Cell-cell communication: CellPhoneDB v5 (statistical method) and LIANA+.
 
-DOS RUTAS, Y NO SON INTERCAMBIABLES
------------------------------------
-CellPhoneDB (secciones 1-4): base HUMANA, hay que orto-transferir tus símbolos
-antes, y espera la matriz normalizada SIN log. A cambio maneja complejos
-multi-subunidad, que para Il6 (IL6 + IL6R + IL6ST) es justo lo que importa.
+TWO ROUTES, AND THEY ARE NOT INTERCHANGEABLE
+--------------------------------------------
+CellPhoneDB (sections 1-4): HUMAN database; your symbols must be ortholog-mapped
+first, and it expects the normalised matrix WITHOUT log. In exchange it handles
+multi-subunit complexes, which for Il6 (IL6 + IL6R + IL6ST) is exactly what matters.
 
-LIANA+ (sección 5): recurso NATIVO de ratón ('mouseconsensus'), sin paso de
-ortología, espera la matriz LOG-normalizada, y permite correr varios recursos
-y ver qué sobrevive. Es la ruta que recomiendo empezar.
+LIANA+ (section 5): NATIVE mouse resource ('mouseconsensus'), no orthology
+step, expects the LOG-normalised matrix, and allows running several resources
+and seeing what survives. This is the route I recommend starting with.
 
-Fíjate en que la escala de la matriz es OPUESTA entre las dos. Es el error de
-copiar-pegar más fácil de cometer aquí.
+Note that the scale of the matrix is OPPOSITE between the two. It is the
+easiest copy-paste error to make here.
 
-    mapa  = mouse_to_human(adata.var_names)              # una vez, se cachea
+    mapa  = mouse_to_human(adata.var_names)              # once, it is cached
     paths = prepare_cpdb_input(adata, "cell_type", OUT, ortholog_map=mapa)
     res   = run_cpdb_statistical(**paths, cpdb_file_path=DB)
     il    = filter_interactions(res, ["Il6", "Il1b"], ortholog_map=mapa)
 
-CELLPHONEDB ES HUMANA
----------------------
-La base de datos son pares ligando-receptor HUMANOS, con símbolos humanos. Tus
-datos son de ratón. No hay ninguna versión murina oficial, así que hay que
-traducir por ortología ANTES de correr nada, y eso no es un detalle de formato:
-es una suposición biológica fuerte. Que IL6-IL6R interactúe en humano no
-garantiza que Il6-Il6ra haga lo mismo en ratón, y hay pares humanos cuyo
-ortólogo murino sencillamente no existe (CXCL8/IL8 es el caso clásico).
+CELLPHONEDB IS HUMAN
+--------------------
+The database consists of HUMAN ligand-receptor pairs, with human symbols. Your
+data are from mouse. There is no official murine version, so symbols must be
+translated by orthology BEFORE running anything, and that is not a formatting
+detail: it is a strong biological assumption. That IL6-IL6R interact in human
+does not guarantee that Il6-Il6ra do the same in mouse, and there are human
+pairs whose murine ortholog simply does not exist (CXCL8/IL8 is the classic case).
 
-Lo que NO hay que hacer es poner los símbolos en mayúsculas y seguir. Funciona
-para la mayoría —Il6 -> IL6, Il1b -> IL1B— y falla en silencio justo donde el
-nombre difiere entre especies (Trp53 no es TP53), que además son a menudo genes
-interesantes. mouse_to_human() usa ortología de Ensembl vía pybiomart; el modo
-'upper' existe solo como último recurso y avisa.
+What must NOT be done is to upper-case the symbols and carry on. It works
+for most genes (Il6 -> IL6, Il1b -> IL1B) and fails silently exactly where the
+name differs between species (Trp53 is not TP53), which are often interesting
+genes as well. mouse_to_human() uses Ensembl orthology via pybiomart; the
+'upper' mode exists only as a last resort and emits a warning.
 
-NO RECORTES GENES ANTES DE CORRER
+DO NOT SUBSET GENES BEFORE RUNNING
 ---------------------------------
-Quieres mirar Il6 e Il1b, pero el método estadístico permuta las etiquetas de
-las células y compara contra la distribución nula de TODAS las interacciones,
-y además necesita la matriz entera para evaluar los complejos (un receptor de
-varias subunidades solo cuenta si todas se expresan). Si le pasas dos genes, el
-nulo se calcula sobre dos genes y el resultado no significa nada. Se corre
-completo y se filtra el RESULTADO: para eso está filter_interactions().
+You want to look at Il6 and Il1b, but the statistical method permutes the cell
+labels and compares against the null distribution of ALL interactions, and it
+also needs the full matrix to evaluate complexes (a multi-subunit receptor
+only counts if all subunits are expressed). If you pass it two genes, the
+null is computed over two genes and the result means nothing. Run it on
+everything and filter the RESULT: that is what filter_interactions() is for.
 
-SOBRE LOS P-VALORES
--------------------
-Salen de permutar etiquetas de célula, así que su resolución mínima es
-1/iterations: con 1000 permutaciones no existe p < 0.001. CellPhoneDB no aplica
-ninguna corrección por test múltiple y son miles de pares x combinaciones de
-tipos celulares. Y como siempre en este pipeline: con 2 ratones las células son
-pseudorréplicas, así que el test contesta "¿es esta media mayor que barajando
-las etiquetas de ESTAS células?", no "¿pasa esto en el ratón?".
+ON THE P-VALUES
+---------------
+They come from permuting cell labels, so their minimum resolution is
+1/iterations: with 1000 permutations there is no p < 0.001. CellPhoneDB applies
+no multiple-testing correction, and there are thousands of pairs x cell-type
+combinations. And as always in this pipeline: with 2 mice the cells are
+pseudoreplicates, so the test answers "is this mean larger than when shuffling
+the labels of THESE cells?", not "does this happen in the mouse?".
 
-AVISO
------
-Las llamadas a cellphonedb de este módulo NO están probadas: la librería no se
-pudo instalar en el entorno donde se escribió (fbpca no compila). La
-orquestación —ortología, formato de entrada, filtrado del resultado— sí se ha
-probado con mocks. Verifica la primera corrida a mano.
+WARNING
+-------
+The cellphonedb calls in this module are NOT tested: the library could not
+be installed in the environment where this was written (fbpca does not compile).
+The orchestration (orthology, input format, result filtering) has been
+tested with mocks. Check the first run by hand.
 """
 
 from __future__ import annotations
@@ -73,7 +73,7 @@ import scipy.sparse as sp
 
 
 # --------------------------------------------------------------------------
-# 1. ortología ratón -> humano
+# 1. mouse -> human orthology
 # --------------------------------------------------------------------------
 
 MIRRORS_ENSEMBL = ("http://www.ensembl.org", "http://useast.ensembl.org",
@@ -87,14 +87,14 @@ def _orto_biomart(reintentos: int = 4, espera: float = 5.0,
                   mirrors: Sequence[str] = MIRRORS_ENSEMBL,
                   verbose: bool = True) -> pd.DataFrame:
     """
-    Ortología desde Ensembl con reintentos y rotación de espejo.
+    Orthology from Ensembl with retries and mirror rotation.
 
-    BioMart devuelve HTTP 429 (too many requests) con bastante facilidad, y
-    pybiomart hace DOS peticiones por consulta —una para la configuración del
-    dataset y otra para los datos—, así que la probabilidad de topar con el
-    límite es el doble de lo que parece. No es un error de tus datos ni del
-    código: se reintenta con espera creciente y, si el espejo sigue negándose,
-    se cambia de espejo.
+    BioMart returns HTTP 429 (too many requests) quite easily, and
+    pybiomart makes TWO requests per query (one for the dataset
+    configuration and another for the data), so the probability of hitting the
+    limit is twice what it seems. It is not an error in your data or in the
+    code: the request is retried with increasing waits and, if the mirror keeps
+    refusing, the mirror is switched.
     """
     import time
 
@@ -110,7 +110,7 @@ def _orto_biomart(reintentos: int = 4, espera: float = 5.0,
                     "hsapiens_homolog_associated_gene_name",
                     "hsapiens_homolog_orthology_type",
                 ])
-                df.columns = ["mouse", "human", "tipo"]
+                df.columns = ["mouse", "human", "kind"]
                 if verbose:
                     print(f"[orto] Ensembl OK ({host})")
                 return df
@@ -118,30 +118,30 @@ def _orto_biomart(reintentos: int = 4, espera: float = 5.0,
                 ultimo = e
                 pausa = espera * (2 ** intento)
                 if verbose:
-                    print(f"[orto] {host} intento {intento+1}/{reintentos} "
-                          f"falló ({type(e).__name__}); espero {pausa:.0f}s")
+                    print(f"[orto] {host} attempt {intento+1}/{reintentos} "
+                          f"failed ({type(e).__name__}); waiting {pausa:.0f}s")
                 time.sleep(pausa)
     raise RuntimeError(
-        f"BioMart no responde en ninguno de los espejos {list(mirrors)}. "
-        f"Último error: {ultimo}. Prueba method='mgi', que es un fichero "
-        f"estático sin límite de peticiones."
+        f"BioMart does not respond on any of the mirrors {list(mirrors)}. "
+        f"Last error: {ultimo}. Try method='mgi', which is a static file "
+        f"with no request limit."
     ) from ultimo
 
 
 def _orto_mgi(url: str = URL_MGI_HOM, verbose: bool = True) -> pd.DataFrame:
     """
-    Ortología desde el informe de homología de MGI.
+    Orthology from the MGI homology report.
 
-    Es un fichero estático, sin API ni límite de peticiones, y es la fuente que
-    usa la propia comunidad de ratón. Cada clase de homología agrupa los genes
-    ortólogos de las dos especies; nos quedamos con las clases que tienen
-    EXACTAMENTE un gen de ratón y uno humano, que es la definición operativa de
-    uno-a-uno.
+    It is a static file, with no API and no request limit, and it is the source
+    used by the mouse community itself. Each homology class groups the
+    orthologous genes of the two species; we keep the classes that have
+    EXACTLY one mouse gene and one human gene, which is the operational
+    definition of one-to-one.
 
-    NO VERIFICADO desde el entorno donde se escribió esto: informatics.jax.org
-    está bloqueado ahí, así que no he podido comprobar los nombres exactos de
-    las columnas del fichero actual. Por eso se detectan en vez de fijarse, y
-    si la detección falla el error te dice qué columnas ha encontrado.
+    NOT VERIFIED from the environment where this was written: informatics.jax.org
+    is blocked there, so I could not check the exact column names of the
+    current file. That is why they are detected instead of hard-coded, and
+    if detection fails the error tells you which columns it found.
     """
     df = pd.read_csv(url, sep="\t", dtype=str)
 
@@ -157,8 +157,8 @@ def _orto_mgi(url: str = URL_MGI_HOM, verbose: bool = True) -> pd.DataFrame:
     col_sym = "Symbol" if "Symbol" in df.columns else _buscar("symbol")
     if not all((col_key, col_org, col_sym)):
         raise RuntimeError(
-            f"No reconozco el formato del fichero de MGI. Columnas: "
-            f"{list(df.columns)}. Detectadas: key={col_key}, org={col_org}, "
+            f"Unrecognised MGI file format. Columns: "
+            f"{list(df.columns)}. Detected: key={col_key}, org={col_org}, "
             f"symbol={col_sym}."
         )
 
@@ -174,7 +174,7 @@ def _orto_mgi(url: str = URL_MGI_HOM, verbose: bool = True) -> pd.DataFrame:
                           aggfunc="first")
     out = piv.reset_index()[["mouse", "human"]].dropna()
     if verbose:
-        print(f"[orto] MGI: {len(out)} parejas uno-a-uno")
+        print(f"[orto] MGI: {len(out)} one-to-one pairs")
     return out
 
 
@@ -186,42 +186,42 @@ def mouse_to_human(
     verbose: bool = True,
 ) -> pd.DataFrame:
     """
-    Tabla símbolo de ratón -> símbolo humano. DataFrame con ['mouse', 'human'].
+    Mouse symbol -> human symbol table. DataFrame with ['mouse', 'human'].
 
-    Se cachea en disco: la primera llamada descarga, las siguientes leen el
-    fichero. Guárdalo con el análisis — las anotaciones de ortología cambian.
+    It is cached on disk: the first call downloads, subsequent calls read the
+    file. Keep it with the analysis, as orthology annotations change.
 
     method
-        'mgi'      informe de homología de MGI. Fichero estático, sin API ni
-                   límites de peticiones. Es el default por eso: BioMart
-                   devuelve 429 con facilidad y deja el análisis colgado.
-        'biomart'  Ensembl vía pybiomart, con reintentos y rotación de espejo.
-        'upper'    poner en MAYÚSCULAS. Último recurso, sin red. Empareja la
-                   mayoría de símbolos y FALLA EN SILENCIO en los que difieren
-                   entre especies (Trp53 != TP53). Avisa al usarlo.
+        'mgi'      MGI homology report. Static file, with no API and no
+                   request limits. It is the default for that reason: BioMart
+                   returns 429 easily and leaves the analysis hanging.
+        'biomart'  Ensembl via pybiomart, with retries and mirror rotation.
+        'upper'    convert to UPPER CASE. Last resort, no network. Matches
+                   most symbols and FAILS SILENTLY on those that differ
+                   between species (Trp53 != TP53). Warns when used.
 
     one_to_one
-        Descarta genes con varios ortólogos en el otro sentido. Es lo
-        conservador: con un mapeo uno-a-muchos hay que decidir qué gen humano
-        recibe la expresión del murino, y esa decisión la acabaría tomando el
-        orden de las filas.
+        Discards genes with several orthologs in the other direction. This is
+        the conservative choice: with a one-to-many mapping one has to decide which
+        human gene receives the murine expression, and that decision would end
+        up being made by the row order.
     """
     if os.path.exists(cache_path):
         mapa = pd.read_csv(cache_path, sep="\t", dtype=str)
         if verbose:
-            print(f"[orto] leído de caché: {cache_path} ({len(mapa)} pares)")
+            print(f"[orto] read from cache: {cache_path} ({len(mapa)} pairs)")
         return mapa
 
     if method == "upper":
         if genes is None:
-            raise ValueError("method='upper' necesita la lista de genes")
+            raise ValueError("method='upper' requires the list of genes")
         mapa = pd.DataFrame({"mouse": list(genes)})
         mapa["human"] = mapa["mouse"].str.upper()
         warnings.warn(
-            "Ortología por MAYÚSCULAS. Empareja la mayoría de los símbolos pero "
-            "no los que difieren entre especies (Trp53 != TP53), y no avisa de "
-            "cuáles ha perdido. Úsalo solo si no puedes bajar la tabla real, y "
-            "dilo en los métodos."
+            "Orthology by UPPER CASE. Matches most symbols but "
+            "not those that differ between species (Trp53 != TP53), and does not "
+            "report which ones were lost. Use it only if you cannot download the real "
+            "table, and state it in the methods."
         )
     elif method == "mgi":
         mapa = _orto_mgi(verbose=verbose)
@@ -231,12 +231,12 @@ def mouse_to_human(
         df = df[df["human"] != ""]
         if one_to_one:
             n0 = len(df)
-            df = df[df["tipo"] == "ortholog_one2one"]
+            df = df[df["kind"] == "ortholog_one2one"]
             if verbose:
-                print(f"[orto] {len(df)} de {n0} pares son uno-a-uno")
+                print(f"[orto] {len(df)} of {n0} pairs are one-to-one")
         mapa = df[["mouse", "human"]].drop_duplicates()
     else:
-        raise ValueError("method debe ser 'mgi', 'biomart' o 'upper'")
+        raise ValueError("method must be 'mgi', 'biomart' or 'upper'")
 
     if one_to_one and method != "upper":
         mapa = mapa[~mapa["mouse"].duplicated(keep=False)]
@@ -244,20 +244,20 @@ def mouse_to_human(
 
     mapa.to_csv(cache_path, sep="\t", index=False)
     if verbose:
-        print(f"[orto] {len(mapa)} pares guardados en {cache_path}")
+        print(f"[orto] {len(mapa)} pairs saved to {cache_path}")
         if genes is not None:
             g = set(genes)
-            print(f"[orto] cubre el {len(g & set(mapa['mouse']))/max(len(g),1):.1%} "
-                  f"de tus genes")
+            print(f"[orto] covers {len(g & set(mapa['mouse']))/max(len(g),1):.1%} "
+                  f"of your genes")
             faltan = [x for x in ("Il6", "Il1b") if x in g and x not in set(mapa["mouse"])]
             if faltan:
-                print(f"[orto] OJO: {faltan} no tienen ortólogo uno-a-uno en "
-                      f"esta tabla. Compruébalo a mano antes de seguir.")
+                print(f"[orto] CAUTION: {faltan} have no one-to-one ortholog in "
+                      f"this table. Check it by hand before continuing.")
     return mapa
 
 
 # --------------------------------------------------------------------------
-# 2. preparar la entrada
+# 2. prepare the input
 # --------------------------------------------------------------------------
 
 def prepare_cpdb_input(
@@ -273,41 +273,41 @@ def prepare_cpdb_input(
     verbose: bool = True,
 ) -> dict:
     """
-    Escribe meta.tsv y counts.h5ad listos para CellPhoneDB. Devuelve las rutas.
+    Writes meta.tsv and counts.h5ad ready for CellPhoneDB. Returns the paths.
 
-    QUÉ MATRIZ. CellPhoneDB promedia la expresión por tipo celular y el
-    estadístico es la media de las dos medias. Una media de valores log NO es
-    el log de la media: log comprime los valores altos, así que un ligando muy
-    expresado en pocas células pesa distinto en una escala y en la otra. Por eso
-    aquí se entrega la matriz normalizada SIN log:
+    WHICH MATRIX. CellPhoneDB averages expression per cell type and the
+    statistic is the mean of the two means. A mean of log values is NOT
+    the log of the mean: log compresses high values, so a ligand highly
+    expressed in few cells weighs differently on one scale and on the other. That
+    is why the normalised matrix WITHOUT log is supplied here:
 
-      layer      úsala si ya tienes una capa normalizada no-log.
-      log_layer  si no, se reconstruye con expm1() sobre la capa log-normalizada
-                 (exacto: deshace el log1p que aplicaste tú).
-      counts_layer  último recurso: normalización por library size sobre counts.
+      layer      use it if you already have a normalised non-log layer.
+      log_layer  otherwise, it is reconstructed with expm1() from the log-normalised layer
+                 (exact: it undoes the log1p you applied).
+      counts_layer  last resort: library-size normalisation on counts.
 
-    Los tutoriales de CellPhoneDB no son consistentes en esto y verás gente
-    pasando datos log. Si quieres replicar a alguien, pásale su capa por
-    `layer=` y deja constancia; pero por defecto va sin log, que es lo coherente
-    con lo que el método calcula.
+    The CellPhoneDB tutorials are not consistent on this and you will see people
+    passing log data. If you want to replicate someone, pass their layer via
+    `layer=` and record it; but by default it goes without log, which is consistent
+    with what the method computes.
 
     min_cells
-        Las poblaciones muy pequeñas dan medias inestables y la permutación no
-        lo arregla: se excluyen y se avisa. No es lo mismo que no tener la
-        población; es que no puedes decir nada de ella aquí.
+        Very small populations give unstable means and permutation does not
+        fix that: they are excluded and a message is printed. This is not the same as not having
+        the population; it means you cannot say anything about it here.
     """
     os.makedirs(outdir, exist_ok=True)
 
-    # --- células
+    # --- cells
     obs = adata.obs[group_key].astype(str)
     tam = obs.value_counts()
     fuera = set(exclude_groups) | set(tam.index[tam < min_cells])
     if fuera and verbose:
-        print(f"[cpdb] excluidas {sorted(fuera)} "
-              f"({dict(tam[list(fuera)])} células, min_cells={min_cells})")
+        print(f"[cpdb] excluded {sorted(fuera)} "
+              f"({dict(tam[list(fuera)])} cells, min_cells={min_cells})")
     keep_cells = ~obs.isin(fuera).to_numpy()
 
-    # --- matriz sin log
+    # --- matrix without log
     if layer is not None:
         M = adata.layers[layer]
         origen = f"layer '{layer}'"
@@ -349,19 +349,19 @@ def prepare_cpdb_input(
         libs = np.asarray(M.sum(axis=1)).ravel()
         libs[libs == 0] = 1.0
         M = sp.diags(1e4 / libs) @ M
-        origen = f"CPM(1e4) sobre '{counts_layer}'"
+        origen = f"CPM(1e4) on '{counts_layer}'"
     if verbose:
-        print(f"[cpdb] matriz de expresión: {origen} (sin log)")
+        print(f"[cpdb] expression matrix: {origen} (without log)")
 
-    # --- ortología
+    # --- orthology
     mapa = dict(zip(ortholog_map["mouse"], ortholog_map["human"]))
     en_mapa = np.array([g in mapa for g in adata.var_names])
     if verbose:
-        print(f"[cpdb] {en_mapa.sum()} de {adata.n_vars} genes tienen ortólogo "
-              f"humano ({en_mapa.mean():.1%})")
+        print(f"[cpdb] {en_mapa.sum()} of {adata.n_vars} genes have a human "
+              f"ortholog ({en_mapa.mean():.1%})")
         if en_mapa.mean() < 0.4:
-            print("[cpdb] AVISO: cobertura baja. Comprueba la tabla de "
-                  "ortología antes de interpretar nada.")
+            print("[cpdb] WARNING: low coverage. Check the orthology "
+                  "table before interpreting anything.")
 
     sub = ad.AnnData(
         X=sp.csr_matrix(M)[keep_cells][:, en_mapa],
@@ -370,16 +370,16 @@ def prepare_cpdb_input(
     )
     if not sub.var_names.is_unique:
         n_dup = int(sub.var_names.duplicated().sum())
-        warnings.warn(f"{n_dup} símbolos humanos duplicados tras el mapeo; me "
-                      f"quedo con la primera aparición de cada uno")
+        warnings.warn(f"{n_dup} duplicated human symbols after mapping; "
+                      f"keeping the first occurrence of each")
         sub = sub[:, ~sub.var_names.duplicated()].copy()
 
-    # --- comprobación de genes de interés
+    # --- check genes of interest
     if verbose:
         for g in ("Il6", "Il1b"):
             if g in mapa:
                 print(f"[cpdb] {g} -> {mapa[g]}: "
-                      f"{'presente' if mapa[g] in sub.var_names else 'AUSENTE'}")
+                      f"{'present' if mapa[g] in sub.var_names else 'ABSENT'}")
 
     meta = pd.DataFrame({"Cell": sub.obs_names, "cell_type": obs[keep_cells].values})
     meta_path = os.path.join(outdir, "meta.tsv")
@@ -388,31 +388,31 @@ def prepare_cpdb_input(
     sub.write_h5ad(counts_path)
 
     if verbose:
-        print(f"[cpdb] {sub.n_obs} células x {sub.n_vars} genes -> {counts_path}")
+        print(f"[cpdb] {sub.n_obs} cells x {sub.n_vars} genes -> {counts_path}")
         print(meta["cell_type"].value_counts().to_string())
     return {"meta_file_path": meta_path, "counts_file_path": counts_path}
 
 
 # --------------------------------------------------------------------------
-# 2b. mirar qué hay DENTRO de la base de datos
+# 2b. look at what is INSIDE the database
 # --------------------------------------------------------------------------
 
 def inspect_cpdb_database(cpdb_file_path: str, verbose: bool = True) -> dict:
     """
-    Abre el .zip de CellPhoneDB y devuelve sus tablas como {nombre: DataFrame}.
+    Opens the CellPhoneDB .zip and returns its tables as {name: DataFrame}.
 
-    No usa la API de la librería: el .zip son CSVs y se leen directamente. Así
-    esto funciona aunque cambie la API entre versiones, y puedes mirar la base
-    ANTES de correr nada.
+    It does not use the library API: the .zip contains CSVs and they are read directly. This way
+    it works even if the API changes between versions, and you can inspect the database
+    BEFORE running anything.
 
-    Las tablas que importan son cuatro y están relacionadas entre sí:
+    Four tables matter and they are related to one another:
       gene         gene_name / hgnc_symbol / uniprot / ensembl
-      protein      una fila por uniprot, con si es receptor, secretado, etc.
-      complex      complejos, definidos como uniprot_1..uniprot_4
-      interaction  los pares, donde cada partner es un uniprot O el nombre de
-                   un complejo
-    Por eso buscar "IL6" en la tabla de interacciones no basta: los partners no
-    son símbolos.
+      protein      one row per uniprot, with whether it is a receptor, secreted, etc.
+      complex      complexes, defined as uniprot_1..uniprot_4
+      interaction  the pairs, where each partner is a uniprot OR the name of
+                   a complex
+    That is why searching for "IL6" in the interaction table is not enough: the partners are not
+    symbols.
     """
     import zipfile
 
@@ -425,9 +425,9 @@ def inspect_cpdb_database(cpdb_file_path: str, verbose: bool = True) -> dict:
                 with z.open(n) as fh:
                     tablas[clave] = pd.read_csv(fh, dtype=str)
             except Exception as e:
-                warnings.warn(f"No he podido leer {n}: {e}")
+                warnings.warn(f"Could not read {n}: {e}")
     if verbose:
-        print(f"[db] {os.path.basename(cpdb_file_path)}: {len(tablas)} tablas")
+        print(f"[db] {os.path.basename(cpdb_file_path)}: {len(tablas)} tables")
         for k, v in sorted(tablas.items()):
             print(f"  {k:35s} {v.shape[0]:>7} x {v.shape[1]}")
     return tablas
@@ -436,13 +436,13 @@ def inspect_cpdb_database(cpdb_file_path: str, verbose: bool = True) -> dict:
 def _tabla(db: Mapping[str, pd.DataFrame], *claves,
            requiere: Sequence[str] = ()) -> Optional[pd.DataFrame]:
     """
-    Busca una tabla por nombre, eligiendo el MEJOR candidato y no el primero.
+    Looks up a table by name, choosing the BEST candidate rather than the first.
 
-    Importa porque el zip trae varias tablas cuyo nombre contiene 'gene'
-    (gene_input, gene_synonym_to_gene_name, ...) y quedarse con la primera del
-    listado del zip es una lotería que depende del orden de los ficheros. Se
-    puntúa: primero las que tienen las columnas que hacen falta, luego las de
-    nombre más corto (gene_input gana a gene_synonym_to_gene_name).
+    This matters because the zip contains several tables whose name contains 'gene'
+    (gene_input, gene_synonym_to_gene_name, ...) and taking the first one in the
+    zip listing is a lottery that depends on the order of the files. Candidates
+    are scored: first those that have the required columns, then those with the
+    shortest name (gene_input beats gene_synonym_to_gene_name).
     """
     cands = [(k, v) for k, v in db.items()
              if all(c in k.lower() for c in claves)]
@@ -466,23 +466,23 @@ def cpdb_gene_coverage(
     verbose: bool = True,
 ) -> pd.DataFrame:
     """
-    ¿Cuáles de TUS genes existen en CellPhoneDB?
+    Which of YOUR genes exist in CellPhoneDB?
 
-    Se hace ANTES de correr. Si un gen no está en la base, no puede aparecer en
-    ningún resultado, y su ausencia en la salida no significa "no interactúa":
-    significa "CellPhoneDB no lo contempla". Son cosas muy distintas y la
-    segunda no se puede leer de la tabla de resultados.
+    Run this BEFORE running the analysis. If a gene is not in the database, it cannot appear in
+    any result, and its absence from the output does not mean "does not interact":
+    it means "CellPhoneDB does not cover it". These are very different things and the
+    second cannot be read from the results table.
 
-    genes en nomenclatura de ratón si pasas ortholog_map; si no, humanos.
+    genes in mouse nomenclature if you pass ortholog_map; otherwise, human.
     """
     gt = _tabla(db, "gene", requiere=("uniprot", "gene_name", "hgnc"))
     if gt is None:
-        raise RuntimeError(f"No encuentro la tabla de genes. Tablas: {list(db)}")
+        raise RuntimeError(f"Gene table not found. Tables: {list(db)}")
 
     cols = [c for c in gt.columns
             if any(k in c.lower() for k in ("gene_name", "hgnc", "symbol"))]
     if not cols:
-        raise RuntimeError(f"La tabla de genes no trae símbolos. Columnas: "
+        raise RuntimeError(f"The gene table has no symbols. Columns: "
                            f"{list(gt.columns)}")
     en_db = set()
     for c in cols:
@@ -496,19 +496,19 @@ def cpdb_gene_coverage(
     filas = []
     for g in genes:
         h = mapa.get(g, g if not mapa else None)
-        filas.append({"gen": g, "humano": h,
-                      "tiene_ortologo": h is not None,
-                      "en_cellphonedb": bool(h) and h in en_db})
+        filas.append({"gene": g, "human": h,
+                      "has_ortholog": h is not None,
+                      "in_cellphonedb": bool(h) and h in en_db})
     out = pd.DataFrame(filas)
 
     if verbose:
         n = len(out)
-        print(f"[db] {out['tiene_ortologo'].sum()}/{n} con ortólogo humano; "
-              f"{out['en_cellphonedb'].sum()}/{n} presentes en CellPhoneDB")
-        fuera = out[~out["en_cellphonedb"]]
+        print(f"[db] {out['has_ortholog'].sum()}/{n} with a human ortholog; "
+              f"{out['in_cellphonedb'].sum()}/{n} present in CellPhoneDB")
+        fuera = out[~out["in_cellphonedb"]]
         if len(fuera) and len(fuera) <= 30:
-            print("[db] NO están en la base: "
-                  + ", ".join(f"{r.gen}" + ("" if r.tiene_ortologo else " (sin ortólogo)")
+            print("[db] NOT in the database: "
+                  + ", ".join(f"{r.gen}" + ("" if r.tiene_ortologo else " (no ortholog)")
                               for r in fuera.itertuples()))
     return out
 
@@ -520,31 +520,31 @@ def cpdb_interactions_for(
     verbose: bool = True,
 ) -> pd.DataFrame:
     """
-    TODAS las interacciones de la base que involucran esos genes, con
-    independencia de tus datos.
+    ALL interactions in the database that involve these genes, regardless
+    of your data.
 
-    Esto es el techo: el máximo de pares que podrías llegar a recuperar. Si
-    IL6 participa en 6 interacciones y tu resultado devuelve 2, sabes que el
-    filtro han sido tus datos; si devuelve 6, has agotado lo que la base
-    contempla. Sin este número, la tabla de resultados no se puede interpretar.
+    This is the ceiling: the maximum number of pairs you could possibly recover. If
+    IL6 takes part in 6 interactions and your result returns 2, you know that the
+    filter was your data; if it returns 6, you have exhausted what the database
+    covers. Without this number, the results table cannot be interpreted.
 
-    Resuelve la cadena símbolo -> uniprot -> complejos que lo contienen ->
-    interacciones donde participa el uniprot o alguno de esos complejos. Buscar
-    el símbolo directamente en la tabla de interacciones no vale: ahí los
-    partners son uniprots y nombres de complejo.
+    Resolves the chain symbol -> uniprot -> complexes containing it ->
+    interactions in which the uniprot or any of those complexes takes part. Searching
+    for the symbol directly in the interaction table does not work: there the
+    partners are uniprots and complex names.
     """
     gt = _tabla(db, "gene", requiere=("uniprot", "gene_name", "hgnc"))
     ct = _tabla(db, "complex", requiere=("complex_name", "uniprot_1"))
     it_ = _tabla(db, "interaction", requiere=("partner_a", "partner_b"))
     if gt is None or it_ is None:
-        raise RuntimeError(f"Faltan tablas necesarias. Tablas: {list(db)}")
+        raise RuntimeError(f"Required tables are missing. Tables: {list(db)}")
 
     if ortholog_map is not None:
         mapa = dict(zip(ortholog_map["mouse"], ortholog_map["human"]))
         humanos = {mapa[g] for g in genes if g in mapa}
         perdidos = [g for g in genes if g not in mapa]
         if perdidos:
-            warnings.warn(f"Sin ortólogo humano: {perdidos}")
+            warnings.warn(f"No human ortholog: {perdidos}")
     else:
         humanos = set(genes)
 
@@ -552,14 +552,14 @@ def cpdb_interactions_for(
                if any(k in c.lower() for k in ("gene_name", "hgnc", "symbol"))]
     col_uni = next((c for c in gt.columns if "uniprot" in c.lower()), None)
     if col_uni is None:
-        raise RuntimeError(f"La tabla de genes no trae uniprot: {list(gt.columns)}")
+        raise RuntimeError(f"The gene table has no uniprot column: {list(gt.columns)}")
 
     sel = pd.Series(False, index=gt.index)
     for c in col_sym:
         sel |= gt[c].astype(str).isin(humanos)
     uniprots = set(gt.loc[sel, col_uni].dropna().astype(str))
 
-    # complejos que contienen alguno de esos uniprots
+    # complexes that contain any of those uniprots
     complejos = set()
     if ct is not None:
         cols_u = [c for c in ct.columns if c.lower().startswith("uniprot")]
@@ -578,13 +578,13 @@ def cpdb_interactions_for(
         if len(cand) >= 2:
             col_pa, col_pb = cand[0], cand[1]
         else:
-            raise RuntimeError(f"No encuentro las columnas de partner en la "
-                               f"tabla de interacciones: {list(it_.columns)}")
+            raise RuntimeError(f"Partner columns not found in the "
+                               f"interaction table: {list(it_.columns)}")
 
     hit = it_[it_[col_pa].astype(str).isin(partners)
               | it_[col_pb].astype(str).isin(partners)].copy()
 
-    # traducir uniprot -> símbolo para que la tabla se pueda leer
+    # translate uniprot -> symbol so that the table is readable
     u2s = {}
     for c in col_sym:
         u2s.update(dict(zip(gt[col_uni].astype(str), gt[c].astype(str))))
@@ -592,14 +592,14 @@ def cpdb_interactions_for(
     hit["simbolo_b"] = hit[col_pb].astype(str).map(u2s).fillna(hit[col_pb])
 
     if verbose:
-        print(f"[db] tablas usadas: gene={gt.shape}, "
+        print(f"[db] tables used: gene={gt.shape}, "
               f"complex={None if ct is None else ct.shape}, "
               f"interaction={it_.shape}")
         print(f"[db] {sorted(humanos)} -> {len(uniprots)} uniprots, "
-              f"{len(complejos)} complejos que los contienen")
+              f"{len(complejos)} complexes containing them")
         if complejos:
-            print(f"[db] complejos: {sorted(complejos)[:8]}")
-        print(f"[db] {len(hit)} interacciones en la base los involucran")
+            print(f"[db] complexes: {sorted(complejos)[:8]}")
+        print(f"[db] {len(hit)} interactions in the database involve them")
         cols_ver = [c for c in ("simbolo_a", "simbolo_b", "annotation_strategy",
                                 "classification", "directionality", "is_integrin")
                     if c in hit.columns]
@@ -609,22 +609,22 @@ def cpdb_interactions_for(
 
 
 # --------------------------------------------------------------------------
-# 3. el método estadístico
+# 3. the statistical method
 # --------------------------------------------------------------------------
 
 def download_cpdb_database(target_dir: str, version: str = "v5.0.0",
                            verbose: bool = True) -> str:
-    """Baja la base de datos de CellPhoneDB. Devuelve la ruta al .zip."""
+    """Downloads the CellPhoneDB database. Returns the path to the .zip."""
     from cellphonedb.utils import db_utils
 
     os.makedirs(target_dir, exist_ok=True)
     db_utils.download_database(target_dir, version)
     zips = [f for f in os.listdir(target_dir) if f.endswith(".zip")]
     if not zips:
-        raise RuntimeError(f"No se ha descargado ningún .zip en {target_dir}")
+        raise RuntimeError(f"No .zip was downloaded into {target_dir}")
     ruta = os.path.join(target_dir, sorted(zips)[-1])
     if verbose:
-        print(f"[cpdb] base de datos: {ruta}")
+        print(f"[cpdb] database: {ruta}")
     return ruta
 
 
@@ -644,27 +644,27 @@ def run_cpdb_statistical(
     verbose: bool = True,
 ) -> dict:
     """
-    cpdb_statistical_analysis_method.call(), con los parámetros que importan
-    explícitos.
+    cpdb_statistical_analysis_method.call(), with the parameters that matter
+    made explicit.
 
     threshold
-        Fracción MÍNIMA de células de un tipo que deben expresar el gen para
-        considerarlo expresado ahí. 0.1 es el default de CellPhoneDB y es una
-        decisión, no una constante: subirlo elimina interacciones sostenidas por
-        una minoría de células (que en una población heterogénea pueden ser
-        reales) y bajarlo llena el resultado de pares dependientes de tres
-        células. Declara el valor que uses.
+        MINIMUM fraction of cells of a type that must express the gene for
+        it to be considered expressed there. 0.1 is the CellPhoneDB default and it is a
+        decision, not a constant: raising it removes interactions supported by
+        a minority of cells (which in a heterogeneous population may be
+        real) and lowering it fills the result with pairs that depend on three
+        cells. Report the value you use.
 
     iterations
-        Número de permutaciones. Fija el suelo del p-valor: con 1000, el mínimo
-        posible es 0.001 y no existe nada por debajo. Si vas a comparar miles de
-        pares, ese suelo es el que manda, no tu alpha.
+        Number of permutations. It sets the floor of the p-value: with 1000, the minimum
+        possible is 0.001 and nothing exists below it. If you are going to compare thousands of
+        pairs, that floor is what dominates, not your alpha.
 
     microenvs_file_path
-        TSV opcional (cell_type, microenvironment) que restringe qué tipos
-        pueden interactuar entre sí. Si sabes que dos poblaciones no comparten
-        nicho, decirlo aquí reduce el número de tests y es más honesto que
-        filtrarlo después.
+        Optional TSV (cell_type, microenvironment) that restricts which types
+        can interact with each other. If you know that two populations do not share a
+        niche, stating it here reduces the number of tests and is more honest than
+        filtering it afterwards.
     """
     from cellphonedb.src.core.methods import cpdb_statistical_analysis_method
 
@@ -690,13 +690,13 @@ def run_cpdb_statistical(
         for k, v in res.items():
             if isinstance(v, pd.DataFrame):
                 print(f"[cpdb] {k}: {v.shape}")
-        print(f"[cpdb] p-valores por permutación: suelo = {1/iterations:g}. "
-              f"CellPhoneDB NO corrige por test múltiple.")
+        print(f"[cpdb] permutation p-values: floor = {1/iterations:g}. "
+              f"CellPhoneDB does NOT correct for multiple testing.")
     return res
 
 
 # --------------------------------------------------------------------------
-# 4. filtrar el resultado por genes concretos
+# 4. filter the result by specific genes
 # --------------------------------------------------------------------------
 
 _META_COLS = ("id_cp_interaction", "interacting_pair", "partner_a", "partner_b",
@@ -714,20 +714,20 @@ def filter_interactions(
     verbose: bool = True,
 ) -> pd.DataFrame:
     """
-    Interacciones que involucran genes concretos, en formato largo.
+    Interactions involving specific genes, in long format.
 
-    genes en NOMENCLATURA DE RATÓN (Il6, Il1b); se traducen con ortholog_map.
-    Si no pasas mapa se asume que ya son símbolos humanos.
+    genes in MOUSE NOMENCLATURE (Il6, Il1b); they are translated with ortholog_map.
+    If no map is passed they are assumed to be human symbols already.
 
     include_complexes
-        Además de las filas donde gene_a/gene_b es exactamente tu gen, incluye
-        aquellas cuyo 'interacting_pair' lo menciona: en CellPhoneDB muchos
-        receptores son complejos y el gen aparece dentro del nombre del complejo
-        y no en gene_a/gene_b. Se marca con la columna 'via_complejo' para que
-        puedas separarlas — no son lo mismo y confundirlas infla el recuento.
+        In addition to the rows where gene_a/gene_b is exactly your gene, includes
+        those whose 'interacting_pair' mentions it: in CellPhoneDB many
+        receptors are complexes and the gene appears inside the complex name
+        and not in gene_a/gene_b. They are flagged with the 'via_complejo' column so that
+        you can separate them; they are not the same and conflating them inflates the count.
 
-    Devuelve una fila por (interacción, par de tipos celulares) con su media y
-    su p-valor, ya filtrada por max_pvalue.
+    Returns one row per (interaction, cell-type pair) with its mean and
+    its p-value, already filtered by max_pvalue.
     """
     means = res["means"]
     pvals = res["pvalues"]
@@ -738,12 +738,12 @@ def filter_interactions(
         for g in genes:
             (humanos.append(mapa[g]) if g in mapa else perdidos.append(g))
         if perdidos:
-            warnings.warn(f"Sin ortólogo humano: {perdidos}")
+            warnings.warn(f"No human ortholog: {perdidos}")
     else:
         humanos = list(genes)
     humanos = set(humanos)
     if verbose:
-        print(f"[filtro] buscando {sorted(humanos)}")
+        print(f"[filtro] searching for {sorted(humanos)}")
 
     meta_cols = [c for c in _META_COLS if c in means.columns]
     par_cols = [c for c in means.columns if c not in meta_cols]
@@ -759,17 +759,17 @@ def filter_interactions(
 
     if not sel.any():
         if verbose:
-            print("[filtro] ninguna interacción con esos genes")
+            print("[filtro] no interactions with those genes")
         return pd.DataFrame()
 
     m = means.loc[sel, meta_cols + par_cols]
     p = pvals.loc[sel, par_cols] if set(par_cols).issubset(pvals.columns) else None
 
-    largo = m.melt(id_vars=meta_cols, var_name="par_celular", value_name="media")
+    largo = m.melt(id_vars=meta_cols, var_name="cell_pair", value_name="media")
     if p is not None:
         pl = pvals.loc[sel, meta_cols + par_cols].melt(
-            id_vars=meta_cols, var_name="par_celular", value_name="pvalue")
-        largo = largo.merge(pl, on=meta_cols + ["par_celular"], how="left")
+            id_vars=meta_cols, var_name="cell_pair", value_name="pvalue")
+        largo = largo.merge(pl, on=meta_cols + ["cell_pair"], how="left")
 
     largo["via_complejo"] = ~(
         largo["gene_a"].isin(humanos) | largo["gene_b"].isin(humanos))
@@ -778,9 +778,9 @@ def filter_interactions(
         sc = res["interaction_scores"]
         if "interacting_pair" in sc.columns:
             sl = sc[sc["interacting_pair"].isin(largo["interacting_pair"])].melt(
-                id_vars=["interacting_pair"], var_name="par_celular",
+                id_vars=["interacting_pair"], var_name="cell_pair",
                 value_name="score")
-            largo = largo.merge(sl, on=["interacting_pair", "par_celular"], how="left")
+            largo = largo.merge(sl, on=["interacting_pair", "cell_pair"], how="left")
 
     if "pvalue" in largo:
         largo = largo[largo["pvalue"] <= max_pvalue]
@@ -789,11 +789,11 @@ def filter_interactions(
         ascending=[True, False] if "pvalue" in largo else [False])
 
     if verbose:
-        print(f"[filtro] {len(largo)} filas (interacción x par celular) con "
+        print(f"[filtro] {len(largo)} rows (interaction x cell pair) with "
               f"p <= {max_pvalue}")
         n_dir = int((~largo["via_complejo"]).sum())
-        print(f"[filtro] {n_dir} por gen directo, {len(largo)-n_dir} solo por "
-              f"aparecer en el nombre de un complejo")
+        print(f"[filtro] {n_dir} by direct gene, {len(largo)-n_dir} only by "
+              f"appearing in the name of a complex")
         if len(largo):
             print(largo.groupby("interacting_pair").size()
                   .sort_values(ascending=False).head(10).to_string())
@@ -801,16 +801,16 @@ def filter_interactions(
 
 
 def plot_interactions(largo: pd.DataFrame, n_top: int = 25, figsize=(11, 8)):
-    """Dotplot: interacción x par celular, tamaño = media, color = -log10(p)."""
+    """Dotplot: interaction x cell pair, size = mean, colour = -log10(p)."""
     import matplotlib.pyplot as plt
 
     if not len(largo):
-        raise ValueError("nada que dibujar")
+        raise ValueError("nothing to plot")
     top = (largo.groupby("interacting_pair")["media"].max()
            .sort_values(ascending=False).head(n_top).index.tolist())
     sub = largo[largo["interacting_pair"].isin(top)].copy()
 
-    pares = sorted(sub["par_celular"].unique())
+    pares = sorted(sub["cell_pair"].unique())
     filas = [t for t in top if t in set(sub["interacting_pair"])]
     xi = {p: i for i, p in enumerate(pares)}
     yi = {t: i for i, t in enumerate(filas)}
@@ -818,7 +818,7 @@ def plot_interactions(largo: pd.DataFrame, n_top: int = 25, figsize=(11, 8)):
            if "pvalue" in sub else sub["media"])
 
     fig, ax = plt.subplots(figsize=figsize, constrained_layout=True)
-    s = ax.scatter([xi[p] for p in sub["par_celular"]],
+    s = ax.scatter([xi[p] for p in sub["cell_pair"]],
                    [yi[t] for t in sub["interacting_pair"]],
                    s=20 + 60 * sub["media"] / max(sub["media"].max(), 1e-9),
                    c=col, cmap="magma_r", edgecolors="none")
@@ -827,39 +827,39 @@ def plot_interactions(largo: pd.DataFrame, n_top: int = 25, figsize=(11, 8)):
     ax.set_yticks(range(len(filas)))
     ax.set_yticklabels(filas, fontsize=8)
     ax.grid(alpha=.2)
-    fig.colorbar(s, ax=ax, label="-log10(p)" if "pvalue" in sub else "media",
+    fig.colorbar(s, ax=ax, label="-log10(p)" if "pvalue" in sub else "mean",
                  shrink=.5)
     return fig, ax
 
 
 # ==========================================================================
-# LIANA+: varios métodos y varios recursos, con consenso
+# LIANA+: several methods and several resources, with consensus
 # ==========================================================================
 #
-# Por qué LIANA además de CellPhoneDB:
+# Why LIANA in addition to CellPhoneDB:
 #
-#   1. Recurso NATIVO DE RATÓN ('mouseconsensus'), así que desaparece el paso
-#      de ortología. Con matiz: parte de ese recurso se construyó transfiriendo
-#      anotación humana, así que la suposición no se elimina, se traslada a
-#      quien lo curó. Mejor que hacerlo tú a mano; no es magia.
-#   2. Permite correr VARIOS recursos y ver qué conclusiones sobreviven, que es
-#      la única forma honesta de responder "¿importa qué base uso?".
+#   1. NATIVE MOUSE resource ('mouseconsensus'), so the orthology step
+#      disappears. With a caveat: part of that resource was built by transferring
+#      human annotation, so the assumption is not removed, it is shifted to
+#      whoever curated it. Better than doing it yourself by hand; it is not magic.
+#   2. Allows running SEVERAL resources and seeing which conclusions survive, which is
+#      the only honest way to answer "does it matter which database I use?".
 #
-# OJO CON LA ESCALA DE LA MATRIZ. LIANA espera datos LOG-NORMALIZADOS, al revés
-# que el CellPhoneDB standalone de arriba, al que hay que darle la matriz sin
-# log. Tu adata.X (norm_scran_log1p) ya vale. Lo que sí hay que poner es
-# use_raw=False, porque LIANA mira adata.raw por defecto.
+# MIND THE MATRIX SCALE. LIANA expects LOG-NORMALISED data, the opposite of
+# the standalone CellPhoneDB above, which must be given the matrix without
+# log. Your adata.X (norm_scran_log1p) is already fine. What must be set is
+# use_raw=False, because LIANA looks at adata.raw by default.
 
 def liana_resources(verbose: bool = True) -> list:
-    """Recursos que LIANA sirve hoy. Pregunta, no adivines la lista."""
+    """Resources that LIANA serves today. Query them, do not guess the list."""
     import liana as li
 
     rs = list(li.rs.show_resources())
     if verbose:
-        print(f"[liana] {len(rs)} recursos: {sorted(rs)}")
+        print(f"[liana] {len(rs)} resources: {sorted(rs)}")
         murinos = [r for r in rs if "mouse" in r.lower() or "murine" in r.lower()]
         if murinos:
-            print(f"[liana] nativos de ratón: {murinos}")
+            print(f"[liana] mouse-native: {murinos}")
     return rs
 
 
@@ -870,17 +870,17 @@ def resource_coverage(
     verbose: bool = True,
 ) -> pd.DataFrame:
     """
-    ¿En qué recursos existe cada gen, y con qué partners? ANTES de correr.
+    In which resources does each gene exist, and with which partners? BEFORE running.
 
-    Es el techo del análisis, igual que cpdb_interactions_for(): si Il6
-    participa en 6 pares del recurso y tu corrida devuelve 2, el filtro han
-    sido tus datos; si devuelve 6, has agotado lo que el recurso contempla. Sin
-    este denominador la tabla de resultados no se puede leer, y la ausencia de
-    un par no se puede distinguir de "no está anotado".
+    It is the ceiling of the analysis, just like cpdb_interactions_for(): if Il6
+    takes part in 6 pairs of the resource and your run returns 2, the filter was
+    your data; if it returns 6, you have exhausted what the resource covers. Without
+    this denominator the results table cannot be read, and the absence of
+    a pair cannot be distinguished from "it is not annotated".
 
     ortholog_map
-        Solo si el recurso es HUMANO. Con 'mouseconsensus' NO se traduce: los
-        símbolos ya son de ratón y traducirlos los rompería.
+        Only if the resource is HUMAN. With 'mouseconsensus' do NOT translate: the
+        symbols are already mouse symbols and translating them would break them.
     """
     import liana as li
 
@@ -892,7 +892,7 @@ def resource_coverage(
         df = li.rs.select_resource(r)
         col_l = "ligand" if "ligand" in df.columns else df.columns[0]
         col_r = "receptor" if "receptor" in df.columns else df.columns[1]
-        # las subunidades de un complejo vienen unidas por '_'
+        # the subunits of a complex are joined by '_'
         lig = df[col_l].astype(str).str.split("_")
         rec = df[col_r].astype(str).str.split("_")
         for g in genes:
@@ -901,10 +901,10 @@ def resource_coverage(
             como_rec = rec.apply(lambda x: buscado in x)
             sel = como_lig | como_rec
             filas.append({
-                "recurso": r, "gen": g, "buscado": buscado,
+                "recurso": r, "gene": g, "buscado": buscado,
                 "n_pares": int(sel.sum()),
-                "como_ligando": int(como_lig.sum()),
-                "como_receptor": int(como_rec.sum()),
+                "as_ligand": int(como_lig.sum()),
+                "as_receptor": int(como_rec.sum()),
                 "partners": "; ".join(sorted(set(
                     df.loc[sel, col_r].astype(str)[como_lig[sel]].tolist()
                     + df.loc[sel, col_l].astype(str)[como_rec[sel]].tolist()
@@ -912,18 +912,18 @@ def resource_coverage(
             })
     out = pd.DataFrame(filas)
     if verbose:
-        print(out[["recurso", "gen", "buscado", "n_pares", "como_ligando",
-                   "como_receptor"]].to_string(index=False))
+        print(out[["recurso", "gene", "buscado", "n_pares", "as_ligand",
+                   "as_receptor"]].to_string(index=False))
         vacios = out[out["n_pares"] == 0]
         if len(vacios):
-            print(f"\n[liana] AVISO: {list(zip(vacios.gen, vacios.recurso))} no "
-                  f"aparecen en esos recursos. Su ausencia del resultado NO "
-                  f"significa que no interactúen: significa que no están "
-                  f"anotados.")
+            print(f"\n[liana] WARNING: {list(zip(vacios.gen, vacios.recurso))} do not "
+                  f"appear in those resources. Their absence from the result does NOT "
+                  f"mean that they do not interact: it means that they are not "
+                  f"annotated.")
         for r in out["recurso"].unique():
             sub = out[(out.recurso == r) & (out.n_pares > 0)]
             for f in sub.itertuples():
-                print(f"\n[liana] {f.gen} en {r}: {f.partners}")
+                print(f"\n[liana] {f.gen} in {r}: {f.partners}")
     return out
 
 
@@ -940,47 +940,47 @@ def run_liana(
     verbose: bool = True,
 ) -> pd.DataFrame:
     """
-    rank_aggregate de LIANA: varios métodos, consenso por agregación de rangos.
+    LIANA rank_aggregate: several methods, consensus by rank aggregation.
 
-    DOS RANKINGS, NO UN P-VALOR. La salida trae:
+    TWO RANKINGS, NOT ONE P-VALUE. The output contains:
 
-      magnitude_rank    ¿está esta interacción fuertemente expresada en este
-                        par de tipos celulares?
-      specificity_rank  ¿lo está MÁS AQUÍ que en los demás pares?
+      magnitude_rank    is this interaction strongly expressed in this
+                        pair of cell types?
+      specificity_rank  is it MORE SO HERE than in the other pairs?
 
-    Miden cosas distintas y confundirlos es el error clásico. Que FAP.3 exprese
-    Il1b no es noticia si lo expresa todo el mundo: para eso está la
-    especificidad. Para Il6/Il1b casi seguro quieres ordenar por
+    They measure different things and conflating them is the classic error. That FAP.3 expresses
+    Il1b is not news if everyone expresses it: that is what
+    specificity is for. For Il6/Il1b you almost certainly want to sort by
     specificity_rank.
 
-    Y el consenso es una AGREGACIÓN DE RANGOS, no un metaanálisis: su p-valor
-    mide concordancia entre métodos, no evidencia biológica. No lo reportes
-    como si fuera un p-valor de la interacción.
+    And the consensus is a RANK AGGREGATION, not a meta-analysis: its p-value
+    measures agreement between methods, not biological evidence. Do not report it
+    as if it were a p-value of the interaction.
 
     expr_prop
-        Fracción mínima de células del tipo que deben expresar el gen. Mismo
-        papel que el 'threshold' de CellPhoneDB, misma condición de decisión
-        declarable.
+        Minimum fraction of cells of the type that must express the gene. Same
+        role as the CellPhoneDB 'threshold', same status as a decision that
+        should be reported.
 
     n_perms
-        Empieza en 100 para cronometrar. Con 9.000 células y varios métodos,
-        1000 permutaciones no son gratis.
+        Start at 100 to time it. With 9,000 cells and several methods,
+        1000 permutations are not free.
     """
     import time
 
     import liana as li
 
     if use_raw is False and adata.raw is not None and verbose:
-        print("[liana] use_raw=False: se usa adata.X. Comprueba que está "
-              "LOG-normalizada (LIANA la espera así, al revés que el "
-              "CellPhoneDB standalone).")
+        print("[liana] use_raw=False: adata.X is used. Check that it is "
+              "LOG-normalised (LIANA expects it that way, the opposite of the "
+              "standalone CellPhoneDB).")
 
     faltan = [c for c in (groupby,) if c not in adata.obs]
     if faltan:
-        raise ValueError(f"No hay obs{faltan}")
+        raise ValueError(f"Missing obs{faltan}")
     n_grupos = adata.obs[groupby].nunique()
     if verbose:
-        print(f"[liana] {resource}, {n_grupos} grupos, expr_prop={expr_prop}, "
+        print(f"[liana] {resource}, {n_grupos} groups, expr_prop={expr_prop}, "
               f"n_perms={n_perms}")
 
     t0 = time.time()
@@ -993,23 +993,23 @@ def run_liana(
     res["recurso"] = resource
 
     if verbose:
-        print(f"[liana] {len(res)} interacciones en {time.time()-t0:.0f}s")
-        print("[liana] ordena por 'specificity_rank' para lo específico y por "
-              "'magnitude_rank' para lo abundante; no son lo mismo.")
+        print(f"[liana] {len(res)} interactions in {time.time()-t0:.0f}s")
+        print("[liana] sort by 'specificity_rank' for what is specific and by "
+              "'magnitude_rank' for what is abundant; they are not the same.")
     return res
 
 
 # ---------------------------------------------------------------------------
-# 5b. Contexto de expresión para la tabla de LIANA
+# 5b. Expression context for the LIANA table
 # ---------------------------------------------------------------------------
-# LIANA devuelve puntuaciones agregadas pero NO las medias de las que salen.
-# Sin ellas no se puede juzgar una fila: no sabes si un `specificity_rank`
-# bajísimo viene de un receptor bien expresado en una población o de un gen
-# que solo se detecta en 30 células. Estas funciones reconstruyen las medias
-# por grupo y las de fondo, y —esto es lo importante— VERIFICAN la
-# reconstrucción contra las columnas que sí trae LIANA. Si mi regla de
-# complejos o mi definición de logFC no coinciden con las suyas, el informe
-# lo dice en vez de dejarte columnas plausibles y falsas.
+# LIANA returns aggregated scores but NOT the means they are derived from.
+# Without them a row cannot be judged: you do not know whether a very low
+# `specificity_rank` comes from a receptor well expressed in one population or from a gene
+# that is detected in only 30 cells. These functions reconstruct the per-group
+# means and the background means, and (this is the important part) VERIFY the
+# reconstruction against the columns that LIANA does provide. If my complex
+# rule or my logFC definition do not match theirs, the report
+# says so instead of leaving you plausible but false columns.
 
 _EPS_CHK = 1e-4
 
@@ -1017,7 +1017,7 @@ _EPS_CHK = 1e-4
 def _matriz_expresion(adata, use_raw=False, layer=None):
     if use_raw:
         if adata.raw is None:
-            raise ValueError("use_raw=True pero adata.raw es None")
+            raise ValueError("use_raw=True but adata.raw is None")
         return adata.raw.X, pd.Index(adata.raw.var_names)
     if layer is not None:
         return adata.layers[layer], pd.Index(adata.var_names)
@@ -1025,7 +1025,7 @@ def _matriz_expresion(adata, use_raw=False, layer=None):
 
 
 def _sumas_por_grupo(X, etiquetas, grupos):
-    """Sumas y tamaños por grupo, para X y para expm1(X)."""
+    """Sums and sizes per group, for X and for expm1(X)."""
     Xe = X.copy()
     if sp.issparse(Xe):
         Xe.data = np.expm1(Xe.data)
@@ -1043,16 +1043,16 @@ def _sumas_por_grupo(X, etiquetas, grupos):
 
 def _complejos_por_grupo(M, complejos):
     """
-    Valor de cada complejo en cada grupo.
+    Value of each complex in each group.
 
-    LIANA reensambla los complejos por la subunidad de MENOR MEDIA (regla
-    'min'), y luego se queda con TODAS las estadísticas de esa subunidad —no
-    con el mínimo de cada estadística por separado. Por eso hace falta también
-    devolver qué subunidad ganó, para poder sacar su logFC.
+    LIANA reassembles complexes by the subunit with the LOWEST MEAN ('min'
+    rule), and then keeps ALL the statistics of that subunit, not
+    the minimum of each statistic separately. That is why it is also necessary
+    to return which subunit won, in order to obtain its logFC.
 
-    OJO: M viene como GENES x GRUPOS. Las subunidades son filas, no columnas;
-    el mínimo va sobre axis=0. Indexarlo al revés no da error, da NaN, que es
-    peor.
+    CAUTION: M comes as GENES x GROUPS. Subunits are rows, not columns;
+    the minimum is taken over axis=0. Indexing it the other way round gives no error, it gives NaN, which is
+    worse.
     """
     medias, elegida = {}, {}
     perdidos = []
@@ -1061,21 +1061,21 @@ def _complejos_por_grupo(M, complejos):
         if not all(s in M.index for s in subs):
             perdidos.append(c)
             continue
-        sub_M = M.loc[subs]                       # subunidades x grupos
+        sub_M = M.loc[subs]                       # subunits x groups
         medias[c] = sub_M.min(axis=0)
         elegida[c] = sub_M.idxmin(axis=0)
     return (pd.DataFrame(medias).T, pd.DataFrame(elegida).T, perdidos)
 
 
 def _lookup(df_ancho, filas, columnas):
-    """df_ancho.at[fila, col] vectorizado, con NaN donde falte."""
+    """Vectorised df_ancho.at[fila, col], with NaN where missing."""
     if not len(df_ancho):
         return np.full(len(filas), np.nan)
     i = df_ancho.index.get_indexer(filas)
     j = df_ancho.columns.get_indexer(columnas)
     V = df_ancho.to_numpy()
-    # el mismo lookup sirve para medias (float) y para nombres de subunidad
-    # (str); si reservo float y luego meto strings, revienta.
+    # the same lookup serves for means (float) and for subunit names
+    # (str); if I allocate float and then insert strings, it breaks.
     relleno = np.nan if V.dtype.kind in "fc" else None
     out = np.full(len(filas), relleno, dtype=V.dtype if V.dtype.kind in "fc"
                   else object)
@@ -1094,46 +1094,46 @@ def annotate_liana(
     verbose: bool = True,
 ) -> pd.DataFrame:
     """
-    Añade a la tabla de LIANA el contexto de expresión que le falta.
+    Adds to the LIANA table the expression context it lacks.
 
-    Columnas nuevas
-    ---------------
-    L_source, R_target   media del ligando en el emisor y del receptor en el
-                         receptor. Son las dos piezas de las que salen
-                         `lr_means` y `expr_prod`.
-    L_target, R_source   las cruzadas. Sirven para ver reciprocidad y
-                         autocrinía: si R_source también es alto, el emisor
-                         se está escuchando a sí mismo.
-    L_global, R_global   media sobre TODAS las células. El denominador mental
-                         para decidir si 0.6 es mucho o poco en tus datos.
-    lfc_L, lfc_R         logFC del ligando en el emisor y del receptor en el
-                         receptor, cada uno contra el resto de poblaciones.
-                         Su media es exactamente `lr_logfc`.
-    spec_weight_oe       `spec_weight` dividido por su valor bajo uniformidad,
-                         1/n_poblaciones². Es un observado/esperado, NO un
-                         odds ratio: no hay odds en ninguna parte, es un
-                         cociente de fracciones. 1 = como el reparto uniforme,
-                         3 = tres veces más concentrado en este par.
+    New columns
+    -----------
+    L_source, R_target   mean of the ligand in the sender and of the receptor in the
+                         receiver. They are the two pieces from which
+                         `lr_means` and `expr_prod` are derived.
+    L_target, R_source   the crossed ones. They show reciprocity and
+                         autocrine signalling: if R_source is also high, the sender
+                         is listening to itself.
+    L_global, R_global   mean over ALL cells. The mental denominator
+                         for deciding whether 0.6 is high or low in your data.
+    lfc_L, lfc_R         logFC of the ligand in the sender and of the receptor in the
+                         receiver, each against the rest of the populations.
+                         Their mean is exactly `lr_logfc`.
+    spec_weight_oe       `spec_weight` divided by its value under uniformity,
+                         1/n_populations². It is an observed/expected ratio, NOT an
+                         odds ratio: there are no odds anywhere, it is a
+                         ratio of fractions. 1 = like the uniform distribution,
+                         3 = three times more concentrated in this pair.
 
-    Verificación
+    Verification
     ------------
-    Se comprueba que (L_source+R_target)/2 == lr_means, que
-    L_source*R_target == expr_prod y que (lfc_L+lfc_R)/2 == lr_logfc. Para el
-    logFC se prueban las DOS definiciones posibles (diferencia de medias sobre
-    la matriz log, y log2 de las medias des-logueadas) y se queda la que
-    reproduce la columna de LIANA. Si ninguna cuadra, avisa y no te da lfc_L
-    ni lfc_R, porque una columna mal reconstruida es peor que ninguna.
+    It is checked that (L_source+R_target)/2 == lr_means, that
+    L_source*R_target == expr_prod and that (lfc_L+lfc_R)/2 == lr_logfc. For the
+    logFC BOTH possible definitions are tried (difference of means on
+    the log matrix, and log2 of the de-logged means) and the one that
+    reproduces the LIANA column is kept. If neither matches, it warns and does not give you lfc_L
+    or lfc_R, because a badly reconstructed column is worse than none.
 
-    OJO con L_global: es la media sobre todas las células, no la suma de las
-    medias por grupo. NATMI usa lo segundo para su denominador, y las dos solo
-    coinciden si todas las poblaciones tienen el mismo tamaño.
+    CAUTION with L_global: it is the mean over all cells, not the sum of the
+    per-group means. NATMI uses the latter for its denominator, and the two only
+    coincide if all populations have the same size.
     """
     out = res.copy()
     col_l = "ligand_complex" if "ligand_complex" in out else "ligand"
     col_r = "receptor_complex" if "receptor_complex" in out else "receptor"
 
     if groupby not in adata.obs:
-        raise ValueError(f"No hay obs['{groupby}']")
+        raise ValueError(f"Missing obs['{groupby}']")
 
     X, var_names = _matriz_expresion(adata, use_raw=use_raw, layer=layer)
     etiquetas = adata.obs[groupby].astype(str).to_numpy()
@@ -1145,11 +1145,11 @@ def annotate_liana(
     tot = np.sum([S[g] for g in grupos], axis=0)
     tot_e = np.sum([Se[g] for g in grupos], axis=0)
 
-    # medias por grupo (matriz tal cual, que se asume log-normalizada)
+    # per-group means (matrix as is, assumed to be log-normalised)
     M = pd.DataFrame({g: S[g] / max(n[g], 1) for g in grupos}, index=var_names)
     glob = pd.Series(tot / n_tot, index=var_names)
 
-    # dos candidatos de logFC, uno por definición
+    # two logFC candidates, one per definition
     lfcA, lfcB = {}, {}
     for g in grupos:
         resto = max(n_tot - n[g], 1)
@@ -1159,13 +1159,13 @@ def annotate_liana(
     LFC = {"A_dif_medias_log": pd.DataFrame(lfcA, index=var_names),
            "B_log2_medias_crudas": pd.DataFrame(lfcB, index=var_names)}
 
-    # --- complejos
+    # --- complexes
     comps = pd.unique(np.concatenate([out[col_l].astype(str).to_numpy(),
                                       out[col_r].astype(str).to_numpy()]))
     CM, CE, perdidos = _complejos_por_grupo(M, comps)
     if perdidos and verbose:
-        print(f"[contexto] {len(perdidos)} complejos con subunidades ausentes "
-              f"de var_names (ej. {perdidos[:5]}); esas filas van a NaN")
+        print(f"[contexto] {len(perdidos)} complexes with subunits missing "
+              f"from var_names (e.g. {perdidos[:5]}); those rows become NaN")
     CG, _, _ = _complejos_por_grupo(glob.to_frame("_g"), comps)
 
     lig = out[col_l].astype(str).to_numpy()
@@ -1180,7 +1180,7 @@ def annotate_liana(
     out["L_global"] = _lookup(CG, lig, np.repeat("_g", len(lig)))
     out["R_global"] = _lookup(CG, rec, np.repeat("_g", len(rec)))
 
-    # --- verificación de las medias
+    # --- verification of the means
     chks = {}
     if "lr_means" in out:
         chks["lr_means"] = np.nanmax(np.abs(
@@ -1189,7 +1189,7 @@ def annotate_liana(
         chks["expr_prod"] = np.nanmax(np.abs(
             out["L_source"] * out["R_target"] - out["expr_prod"]))
 
-    # --- logFC: elegir la definición que reproduce lr_logfc
+    # --- logFC: choose the definition that reproduces lr_logfc
     elegido, dif_lfc = None, {}
     if "lr_logfc" in out:
         sub_l = _lookup(CE, lig, src)
@@ -1204,46 +1204,46 @@ def annotate_liana(
             out["lfc_R"] = _lookup(LFC[elegido], sub_r, tgt)
         else:
             warnings.warn(
-                f"No consigo reproducir 'lr_logfc' con ninguna de las dos "
-                f"definiciones (mejor residuo {dif_lfc[elegido]:.4g} con "
-                f"'{elegido}'). No añado lfc_L/lfc_R: prefiero no darte "
-                f"columnas que no sé de dónde salen.")
+                f"Could not reproduce 'lr_logfc' with either of the two "
+                f"definitions (best residual {dif_lfc[elegido]:.4g} with "
+                f"'{elegido}'). Not adding lfc_L/lfc_R: better not to give you "
+                f"columns whose origin is unknown.")
             elegido = None
 
-    # --- observado/esperado de NATMI
+    # --- NATMI observed/expected
     if "spec_weight" in out:
         out["spec_weight_oe"] = out["spec_weight"] * (n_pop ** 2)
 
     if verbose:
-        print(f"[contexto] {n_pop} poblaciones, {n_tot} células; "
-              f"esperado de spec_weight bajo uniformidad = "
+        print(f"[contexto] {n_pop} populations, {n_tot} cells; "
+              f"expected spec_weight under uniformity = "
               f"{1/n_pop**2:.4f}")
         for k, v in chks.items():
-            estado = "OK" if v <= _EPS_CHK else "NO CUADRA"
-            print(f"[contexto] check {k:10s} residuo máx {v:.3g}  {estado}")
+            estado = "OK" if v <= _EPS_CHK else "MISMATCH"
+            print(f"[contexto] check {k:10s} max residual {v:.3g}  {estado}")
         if dif_lfc:
             for k, v in dif_lfc.items():
-                print(f"[contexto] check lr_logfc  {k:22s} residuo máx "
+                print(f"[contexto] check lr_logfc  {k:22s} max residual "
                       f"{v:.3g}")
             if elegido:
-                print(f"[contexto] logFC reconstruido con '{elegido}'")
+                print(f"[contexto] logFC reconstructed with '{elegido}'")
         if any(v > _EPS_CHK for v in chks.values()):
-            print("[contexto] AVISO: si lr_means/expr_prod no cuadran, la "
-                  "matriz que le estás pasando aquí NO es la misma con la que "
-                  "corriste LIANA (¿use_raw, layer, o el adata equivocado?). "
-                  "No te fíes de L_source/R_target hasta arreglarlo.")
+            print("[contexto] WARNING: if lr_means/expr_prod do not match, the "
+                  "matrix you are passing here is NOT the same one with which "
+                  "you ran LIANA (use_raw, layer, or the wrong adata?). "
+                  "Do not trust L_source/R_target until this is fixed.")
     return out
 
 
 def orden_columnas_liana(res: pd.DataFrame) -> pd.DataFrame:
     """
-    Reordena para leer: identidad, decisión, especificidad, contexto. Las
-    puntuaciones crudas de magnitud y el p de CellPhoneDB se van al final
-    porque en una pregunta de citoquinas no aportan (el p satura en 0 y la
-    magnitud la domina el partner abundante).
+    Reorders for reading: identity, decision, specificity, context. The
+    raw magnitude scores and the CellPhoneDB p go to the end
+    because in a cytokine question they add nothing (the p saturates at 0 and the
+    magnitude is dominated by the abundant partner).
     """
     delante = ["source", "target", "ligand_complex", "receptor_complex",
-               "ligand", "receptor", "como",
+               "ligand", "receptor", "role",
                "specificity_rank", "magnitude_rank",
                "lr_logfc", "lfc_L", "lfc_R",
                "spec_weight_oe", "spec_weight", "scaled_weight",
@@ -1267,43 +1267,43 @@ def filter_liana(
     max_magnitude: Optional[float] = None,
     como: Optional[str] = None,
     sort_by: str = "lr_logfc",
-    max_rank: Optional[float] = None,      # compatibilidad hacia atrás
+    max_rank: Optional[float] = None,      # backwards compatibility
     rank_col: str = "specificity_rank",
     verbose: bool = True,
 ) -> pd.DataFrame:
     """
-    Interacciones que involucran genes concretos, con criterio en DOS ejes.
+    Interactions involving specific genes, with criteria on TWO axes.
 
-    En LIANA las columnas 'ligand_complex'/'receptor_complex' traen las
-    subunidades unidas por guion bajo (IL6R_IL6ST). Hay que PARTIRLAS y
-    comparar elemento a elemento: un `contains("IL6")` capturaría también
-    IL6ST, que es otra cosa. Se marca 'como' para que sepas si tu gen es el
-    ligando o una subunidad del receptor.
+    In LIANA the 'ligand_complex'/'receptor_complex' columns contain the
+    subunits joined by underscores (IL6R_IL6ST). They must be SPLIT and
+    compared element by element: a `contains("IL6")` would also capture
+    IL6ST, which is something else. 'role' is set so that you know whether your gene is the
+    ligand or a receptor subunit.
 
-    POR QUÉ LA MAGNITUD NO SE FILTRA POR RANGO
-    ------------------------------------------
-    `magnitude_rank` es un rango contra la tabla ENTERA, donde compites con
-    colágenos, fibronectina y Apoe. Una citoquina pierde ese rango siempre, y
-    sin embargo puede estar perfectamente expresada en términos absolutos. Por
-    eso el suelo de magnitud es `min_expr_prod`, que está en la escala de los
-    datos, y `max_magnitude` viene apagado. Enciéndelo solo si tu pregunta es
-    abierta ("¿qué habla más aquí?") en vez de dirigida a unos genes.
+    WHY MAGNITUDE IS NOT FILTERED BY RANK
+    -------------------------------------
+    `magnitude_rank` is a rank against the ENTIRE table, where you compete with
+    collagens, fibronectin and Apoe. A cytokine always loses on that rank, and
+    yet it can be perfectly well expressed in absolute terms. That
+    is why the magnitude floor is `min_expr_prod`, which is on the scale of the
+    data, and `max_magnitude` is switched off. Switch it on only if your question is
+    open-ended ("what talks most here?") rather than directed at a few genes.
 
-    `specificity_rank` sí se filtra por rango: ahí el rango es la métrica.
-    Pero tiene un suelo de empate (mira `res[rank_col].value_counts()`), y por
-    debajo de él no ordena. De ahí que el orden por defecto sea `lr_logfc`
-    descendente, que es la única columna de especificidad que sigue
-    discriminando dentro del empate.
+    `specificity_rank` is filtered by rank: there the rank is the metric.
+    But it has a tie floor (look at `res[rank_col].value_counts()`), and
+    below it there is no ordering. Hence the default ordering is `lr_logfc`
+    descending, which is the only specificity column that still
+    discriminates within the tie.
 
     como
-        'ambos' | 'ligando' | 'subunidad_receptor'. Filtra por el papel de tus
-        genes. 'subunidad_receptor' NO significa descartable: si buscas Il6 y
-        sale Il11 sobre Il6ra_Il6st, eso es la familia gp130 usando el mismo
-        receptor, que puede ser la respuesta a tu pregunta.
+        'both' | 'ligand' | 'receptor_subunit'. Filters by the role of your
+        genes. 'receptor_subunit' does NOT mean discardable: if you search for Il6 and
+        Il11 on Il6ra_Il6st comes up, that is the gp130 family using the same
+        receptor, which may be the answer to your question.
     """
     if max_rank is not None:
-        warnings.warn("max_rank está deprecado; lo interpreto como "
-                      "max_specificity. Usa max_specificity/min_expr_prod.")
+        warnings.warn("max_rank is deprecated; interpreting it as "
+                      "max_specificity. Use max_specificity/min_expr_prod.")
         max_specificity = max_rank
 
     mapa = (dict(zip(ortholog_map["mouse"], ortholog_map["human"]))
@@ -1320,20 +1320,20 @@ def filter_liana(
 
     sel = es_lig | es_rec
     out = res[sel].copy()
-    out["como"] = np.where(es_lig[sel],
-                           np.where(es_rec[sel], "ambos", "ligando"),
-                           "subunidad_receptor")
+    out["role"] = np.where(es_lig[sel],
+                           np.where(es_rec[sel], "both", "ligand"),
+                           "receptor_subunit")
     antes = len(out)
 
     pasos = []
     if como is not None:
-        out = out[out["como"] == como]
+        out = out[out["role"] == como]
         pasos.append(f"como == '{como}': {len(out)}")
     if rank_col in out and max_specificity is not None:
         out = out[out[rank_col] <= max_specificity]
         pasos.append(f"{rank_col} <= {max_specificity}: {len(out)}")
     elif rank_col not in out:
-        warnings.warn(f"No hay columna '{rank_col}'; no filtro especificidad")
+        warnings.warn(f"No '{rank_col}' column; specificity is not filtered")
     if min_expr_prod is not None and "expr_prod" in out:
         out = out[out["expr_prod"] >= min_expr_prod]
         pasos.append(f"expr_prod >= {min_expr_prod}: {len(out)}")
@@ -1345,31 +1345,31 @@ def filter_liana(
         asc = sort_by.endswith("_rank") or sort_by.startswith("cellphone")
         out = out.sort_values(sort_by, ascending=asc)
     elif verbose:
-        print(f"[filtro] no hay '{sort_by}'; ordeno por {rank_col}. "
-              f"¿Se te olvidó pasar por annotate_liana()?")
+        print(f"[filtro] no '{sort_by}' column; sorting by {rank_col}. "
+              f"Did you forget to run annotate_liana()?")
         if rank_col in out:
             out = out.sort_values(rank_col)
 
     out = orden_columnas_liana(out)
 
     if verbose:
-        print(f"[filtro] {antes} interacciones anotadas con "
+        print(f"[filtro] {antes} annotated interactions with "
               f"{sorted(buscados)}")
         for p in pasos:
             print(f"[filtro]   -> {p}")
         if len(out):
-            print(out["como"].value_counts().to_string())
-            cols = [c for c in ("source", "target", col_l, col_r, "como",
+            print(out["role"].value_counts().to_string())
+            cols = [c for c in ("source", "target", col_l, col_r, "role",
                                 "specificity_rank", "lr_logfc", "lfc_L",
                                 "lfc_R", "spec_weight_oe", "L_source",
                                 "R_target", "L_global", "R_global")
                     if c in out.columns]
             print(out[cols].head(20).round(3).to_string(index=False))
         else:
-            print("[filtro] nada sobrevive. Antes de relajar el umbral mira "
-                  "si es por expr_prod (los pares están apagados) o por "
-                  "specificity_rank (están encendidos en todas partes): son "
-                  "conclusiones distintas.")
+            print("[filtro] nothing survives. Before relaxing the threshold check "
+                  "whether it is due to expr_prod (the pairs are off) or to "
+                  "specificity_rank (they are on everywhere): these are "
+                  "different conclusions.")
     return out
 
 
@@ -1384,38 +1384,38 @@ def compare_resources(
     **kwargs,
 ) -> pd.DataFrame:
     """
-    La misma pregunta con varios recursos: ¿qué interacciones sobreviven?
+    The same question with several resources: which interactions survive?
 
-    DISTINGUE DOS COSAS QUE SE CONFUNDEN, y me las confundí yo esta mañana con
-    los fondos de la GOEA:
+    DISTINGUISH TWO THINGS THAT ARE EASILY CONFUSED, as I confused them myself this morning with
+    the GOEA backgrounds:
 
-      n_recursos_testado  en cuántos recursos está ANOTADO ese par
-      n_recursos_sig      en cuántos sale por debajo de max_rank
+      n_recursos_testado  in how many resources that pair is ANNOTATED
+      n_recursos_sig      in how many it falls below max_rank
 
-    Un par ausente de CellTalkDB no es "no significativo", es "no anotado", y
-    si no separas las dos cosas el recurso más pequeño hace que todo parezca
-    frágil. La fracción que importa es sig/testado, no sig/total.
+    A pair absent from CellTalkDB is not "non-significant", it is "not annotated", and
+    if you do not separate the two the smallest resource makes everything look
+    fragile. The fraction that matters is sig/tested, not sig/total.
 
-    Los recursos humanos (cellphonedb, cellchatdb, celltalkdb) se corren tal
-    cual sobre símbolos de ratón y NO van a emparejar bien salvo que LIANA
-    traduzca por dentro. Si ves coberturas ridículas en un recurso humano, usa
-    li.rs.translate_resource() para orto-transferirlo, o quédate con
-    'mouseconsensus' y los que LIANA sirva en murino.
+    The human resources (cellphonedb, cellchatdb, celltalkdb) are run as
+    they are on mouse symbols and will NOT match well unless LIANA
+    translates internally. If you see absurdly low coverage in a human resource, use
+    li.rs.translate_resource() to ortholog-transfer it, or stick with
+    'mouseconsensus' and those that LIANA serves for mouse.
     """
     trozos = []
     for r in resources:
         if verbose:
-            print(f"\n===== recurso '{r}' =====")
+            print(f"\n===== resource '{r}' =====")
         try:
             res = run_liana(adata, groupby, resource=r,
                             key_added=f"liana_{r}", verbose=verbose, **kwargs)
         except Exception as e:
-            warnings.warn(f"{r} falló: {e}")
+            warnings.warn(f"{r} failed: {e}")
             continue
         trozos.append(res)
 
     if not trozos:
-        raise RuntimeError("Ningún recurso completó")
+        raise RuntimeError("No resource completed")
 
     todo = pd.concat(trozos, ignore_index=True)
     col_l = "ligand_complex" if "ligand_complex" in todo else "ligand"
@@ -1428,20 +1428,20 @@ def compare_resources(
         n_recursos_sig=("_sig", "sum"),
         mejor_rank=(rank_col, "min"),
     ).reset_index()
-    tabla["fraccion"] = (tabla["n_recursos_sig"]
+    tabla["fraction"] = (tabla["n_recursos_sig"]
                          / tabla["n_recursos_testado"].clip(lower=1))
     tabla = tabla.sort_values(["n_recursos_sig", "mejor_rank"],
                               ascending=[False, True])
 
     if verbose:
         n = todo["recurso"].nunique()
-        print(f"\n[recursos] {n} recursos corridos")
-        print(f"[recursos] pares anotados en los {n}: "
+        print(f"\n[recursos] {n} resources run")
+        print(f"[recursos] pairs annotated in all {n}: "
               f"{int((tabla.n_recursos_testado == n).sum())}")
-        print(f"[recursos] significativos en todos aquellos en los que están "
-              f"anotados: {int((tabla.fraccion == 1).sum())}")
-        print("[recursos] Compara SIEMPRE sig/testado, no sig/total: un par "
-              "que solo existe en un recurso no es frágil, es exclusivo.")
+        print(f"[recursos] significant in all those in which they are "
+              f"annotated: {int((tabla.fraccion == 1).sum())}")
+        print("[recursos] ALWAYS compare sig/tested, not sig/total: a pair "
+              "that exists in only one resource is not fragile, it is exclusive.")
         print(tabla.head(20).round(4).to_string(index=False))
     return tabla
 
@@ -1451,11 +1451,11 @@ def plot_liana(adata: ad.AnnData, key: str = "liana_res",
                source_labels=None, target_labels=None, top_n: int = 25,
                **kwargs):
     """
-    dotplot de LIANA, con especificidad en el COLOR por defecto.
+    LIANA dotplot, with specificity in the COLOUR by default.
 
-    El default de la librería suele destacar magnitud, y la magnitud premia a
-    los genes abundantes en todas partes. Si lo que buscas es qué par de tipos
-    celulares habla de forma particular, el color tiene que ser especificidad.
+    The library default usually highlights magnitude, and magnitude rewards
+    genes that are abundant everywhere. If what you are looking for is which pair of cell
+    types communicates in a particular way, the colour has to be specificity.
     """
     import liana as li
 
@@ -1466,7 +1466,7 @@ def plot_liana(adata: ad.AnnData, key: str = "liana_res",
 
 
 # ---------------------------------------------------------------------------
-# 5c. Delta entre condiciones
+# 5c. Delta between conditions
 # ---------------------------------------------------------------------------
 
 def _clave_liana(df: pd.DataFrame) -> pd.MultiIndex:
@@ -1479,7 +1479,7 @@ def _clave_liana(df: pd.DataFrame) -> pd.MultiIndex:
 
 
 def _medias_y_props(adata, groupby, complejos, use_raw=False, layer=None):
-    """Medias y fracción de células que expresan, por complejo y por grupo."""
+    """Means and fraction of expressing cells, per complex and per group."""
     X, var_names = _matriz_expresion(adata, use_raw=use_raw, layer=layer)
     etiquetas = adata.obs[groupby].astype(str).to_numpy()
     grupos = sorted(pd.unique(etiquetas))
@@ -1498,7 +1498,7 @@ def _medias_y_props(adata, groupby, complejos, use_raw=False, layer=None):
     P = pd.DataFrame(props, index=var_names)
 
     CM, _, _ = _complejos_por_grupo(M, complejos)
-    # expr_prop de LIANA se aplica a CADA subunidad: la que manda es la peor
+    # LIANA's expr_prop is applied to EACH subunit: the worst one decides
     CP, _, _ = _complejos_por_grupo(P, complejos)
     return CM, CP
 
@@ -1520,49 +1520,49 @@ def delta_liana(
     verbose: bool = True,
 ) -> pd.DataFrame:
     """
-    Compara dos corridas de LIANA (una por condición) sobre una selección fija.
+    Compares two LIANA runs (one per condition) over a fixed selection.
 
-    LA SELECCIÓN SE PASA, NO SE RECALCULA
-    -------------------------------------
-    `seleccion` es la tabla que ya filtraste sobre el pooled (la salida de
-    `filter_liana`). Aquí no hay umbrales de selección a propósito: si los
-    hubiera, tendrías el criterio en dos sitios y el argumento de que la lista
-    estaba fija ANTES de mirar el delta dejaría de ser comprobable. Si pasas
-    None se comparan todos los pares en común, que sirve para explorar pero no
-    para concluir.
+    THE SELECTION IS PASSED IN, NOT RECOMPUTED
+    ------------------------------------------
+    `seleccion` is the table you already filtered on the pooled data (the output of
+    `filter_liana`). There are deliberately no selection thresholds here: if there
+    were, the criterion would live in two places and the argument that the list
+    was fixed BEFORE looking at the delta would no longer be verifiable. If you pass
+    None all pairs in common are compared, which is useful for exploration but not
+    for drawing conclusions.
 
-    NO SE COMPARAN RANGOS
-    ---------------------
-    `magnitude_rank` y `specificity_rank` son rangos DENTRO de cada tabla. Dos
-    corridas tienen distribuciones de referencia distintas —basta con que en
-    una pasen el expr_prop más interacciones para que todos los rangos se
-    desplacen— así que restarlos mide el tamaño de la tabla, no la biología.
-    Por eso `cols` solo admite columnas absolutas. Si metes un '_rank' avisa.
+    RANKS ARE NOT COMPARED
+    ----------------------
+    `magnitude_rank` and `specificity_rank` are ranks WITHIN each table. Two
+    runs have different reference distributions (it is enough that in
+    one more interactions pass expr_prop for all ranks to
+    shift), so subtracting them measures the size of the table, not the biology.
+    That is why `cols` only accepts absolute columns. If you include a '_rank' it warns.
 
-    AUSENTE NO ES CERO
+    ABSENT IS NOT ZERO
     ------------------
-    Un par puede faltar en una tabla porque el gen no se expresa o porque no
-    llegó al `expr_prop`, que es una fracción de células, no una media. Son
-    conclusiones opuestas y la tabla las separa en 'motivo':
+    A pair may be missing from a table because the gene is not expressed or because it
+    did not reach `expr_prop`, which is a fraction of cells, not a mean. These are
+    opposite conclusions and the table separates them in 'motivo':
 
-      no_expresado      la media es 0 en esa condición
-      bajo_expr_prop    hay expresión pero en menos del expr_prop de células
-      desconocido       no me pasaste los adatas y no puedo saberlo
+      no_expresado      the mean is 0 in that condition
+      bajo_expr_prop    there is expression but in fewer than expr_prop of cells
+      desconocido       you did not pass me the adatas and I cannot tell
 
-    Para distinguirlas hace falta `adatas=(adata_a, adata_b)` y `groupby`. Sin
-    eso el delta de las filas que solo están en una condición queda en NaN, que
-    es lo honesto: no sabes si el cambio es de 0.6 a 0 o de 0.6 a 0.55.
+    Distinguishing them requires `adatas=(adata_a, adata_b)` and `groupby`. Without
+    them the delta of rows present in only one condition stays NaN, which
+    is the honest choice: you do not know whether the change is from 0.6 to 0 or from 0.6 to 0.55.
 
-    Y con una réplica por condición esto es DESCRIPTIVO. No hay p-valor porque
-    no hay nada que replique: el delta y la variabilidad entre animales son
-    indistinguibles.
+    And with one replicate per condition this is DESCRIPTIVE. There is no p-value because
+    nothing is replicated: the delta and the between-animal variability are
+    indistinguishable.
     """
     na, nb = nombres[0], nombres[1]
     malas = [c for c in cols if c.endswith("_rank")]
     if malas:
         warnings.warn(
-            f"{malas} son rangos internos de cada tabla y no son comparables "
-            f"entre corridas. Los quito. Usa expr_prod / L_source / R_target / "
+            f"{malas} are internal ranks of each table and are not comparable "
+            f"between runs. Removing them. Use expr_prod / L_source / R_target / "
             f"lr_logfc / spec_weight_oe.")
         cols = [c for c in cols if c not in malas]
 
@@ -1570,24 +1570,24 @@ def delta_liana(
     B = res_b.copy(); B.index = _clave_liana(B)
     for nom, T in ((na, A), (nb, B)):
         if T.index.duplicated().any():
-            raise ValueError(f"{nom} tiene pares duplicados; ¿concatenaste "
-                             f"recursos sin separar?")
+            raise ValueError(f"{nom} has duplicated pairs; did you concatenate "
+                             f"resources without separating them?")
 
     usables = [c for c in cols if c in A.columns and c in B.columns]
     faltan = [c for c in cols if c not in usables]
     if faltan:
-        warnings.warn(f"{faltan} no están en ambas tablas (¿te falta "
-                      f"annotate_liana en alguna?); las omito")
+        warnings.warn(f"{faltan} are not in both tables (is annotate_liana "
+                      f"missing on one of them?); omitting them")
     if not usables:
-        raise ValueError("Ninguna columna comparable")
+        raise ValueError("No comparable column")
 
     if seleccion is not None:
         clave = _clave_liana(seleccion).unique()
     else:
         clave = A.index.union(B.index)
         if verbose:
-            print("[delta] sin selección: comparo todo. Exploratorio, no "
-                  "concluyas de aquí.")
+            print("[delta] no selection: comparing everything. Exploratory, do not "
+                  "draw conclusions from this.")
 
     out = pd.DataFrame(index=clave)
     for c in usables:
@@ -1596,12 +1596,12 @@ def delta_liana(
 
     en_a = clave.isin(A.index)
     en_b = clave.isin(B.index)
-    out["estado"] = np.where(en_a & en_b, "ambas",
-                    np.where(en_a, f"solo_{na}",
-                    np.where(en_b, f"solo_{nb}", "en_ninguna")))
-    out["motivo"] = np.where(out["estado"] == "ambas", "", "desconocido")
+    out["estado"] = np.where(en_a & en_b, "both_dbs",
+                    np.where(en_a, f"only_{na}",
+                    np.where(en_b, f"only_{nb}", "in_neither")))
+    out["motivo"] = np.where(out["estado"] == "both_dbs", "", "desconocido")
 
-    # --- rellenar el lado que falta, si me das con qué
+    # --- fill in the missing side, if given the means to do so
     if adatas is not None and groupby is not None:
         comps = pd.unique(np.concatenate([
             clave.get_level_values("ligand_complex").to_numpy(),
@@ -1653,17 +1653,17 @@ def delta_liana(
     out = out[orden].reset_index()
 
     if verbose:
-        print(f"[delta] {len(clave)} pares comparados "
-              f"({nb} menos {na}), ordenados por |{ref}|")
+        print(f"[delta] {len(clave)} pairs compared "
+              f"({nb} minus {na}), sorted by |{ref}|")
         print(out["estado"].value_counts().to_string())
         m = out.loc[out["motivo"] != "", "motivo"].value_counts()
         if len(m):
             print(m.to_string())
             if (out["motivo"] == "desconocido").any():
-                print("[delta] pásame adatas=(a, b) y groupby para saber si "
-                      "los ausentes están a cero o solo por debajo del "
-                      "expr_prop; no es lo mismo.")
+                print("[delta] pass adatas=(a, b) and groupby to find out whether "
+                      "the absent pairs are at zero or only below "
+                      "expr_prop; it is not the same.")
         print(out.head(top).round(3).to_string(index=False))
-        print("[delta] recuerda: una réplica por condición. Esto describe, "
-              "no contrasta.")
+        print("[delta] remember: one replicate per condition. This describes, "
+              "it does not test.")
     return out

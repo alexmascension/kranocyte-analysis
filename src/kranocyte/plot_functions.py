@@ -17,7 +17,7 @@ from .common_vars import BASE_DIR
 
 
 palette = {
-    # ---- Major (igual que antes) ----
+    # ---- Major (same as before) ----
     'Endothelial': "#E766E7",
     'FAP':         "#165A81",
     'Immune':      "#6933AF",
@@ -25,7 +25,7 @@ palette = {
     'Satellite':   "#289C79",
     'Tenocyte':    "#D38E28",
 
-    # ---- Minor (más oscuros) ----
+    # ---- Minor (darker) ----
     # FAP (7)
     'FAP_A':"#C7CDD3",
     'FAP_AB':"#899199",

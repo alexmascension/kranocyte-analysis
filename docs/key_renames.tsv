@@ -1,0 +1,77 @@
+# Renamed result keys, column names and categorical values, kranocyte v2.
+# The package used to return Spanish keys in its report tables and dicts. They are now English.
+# No h5ad object was affected: all 39 files under data/processed/ were scanned recursively, one by
+# one by full path (five of them share the basename adata_normalized.h5ad), and none of these
+# names appears as an obs/var/uns/obsm/layers/obsp key, an HDF5 attribute or a categorical value.
+# Only in-memory report frames and returned dicts changed, so old code that reads them needs updating.
+spanish_name	english_name	module	where
+_parcheado	_patched	trajectory.py	module attribute (scvelo patch guard)
+ambas	both_dbs	interactions.py	database-coverage value
+ambos	both	interactions.py	role value
+aristas	edges	trajectory.py	paga_report() result key / edge table
+celula	cell	qc.py	obs['nf_group'] value
+clase	class	qc.py	droplet summary column
+coherencia	coherence	trajectory.py	paga_report() result key
+como	role	interactions.py	role column
+como_ligando	as_ligand	interactions.py	coverage report column
+como_receptor	as_receptor	interactions.py	coverage report column
+condicion	condition	processing.py	grouping key
+conectividad	connectivity	trajectory.py	edge table column
+confianza_media	mean_confidence	trajectory.py	paga_report() result key
+conservado	kept	qc.py	filter_debris column
+corr_con_per_muestra	corr_with_per_sample	trajectory.py	paga_report() result key
+corr_externa	external_corr	trajectory.py	paga_report() result key
+corr_min_abs	min_abs_corr	trajectory.py	paga_report() result key
+counts_mediana	median_counts	degs.py	DEG summary column
+delta_deteccion	delta_detection	degs.py	DEG table column
+delta_pseudotiempo	delta_pseudotime	trajectory.py	edge table column
+direccion	direction	trajectory.py	edge table column
+eliminado	removed	qc.py	filter_debris column
+en_cellphonedb	in_cellphonedb	interactions.py	ortholog report column
+en_ninguna	in_neither	interactions.py	database-coverage value
+especif_ganada_counts	specificity_gained_counts	qc.py	detail table column
+especificidad_ganada	specificity_gained	qc.py	detail table column
+estabilidad	stability	trajectory.py	bootstrap table column
+flujo_completo	full_flow	trajectory.py	paga_report() result key
+flujo_neto	net_flow	trajectory.py	edge table column
+frac_debajo_debris_nf	frac_below_debris_nf	qc.py	threshold_report key
+frac_eliminada	frac_removed	qc.py	detail table column
+frac_eliminada_counts	frac_removed_counts	qc.py	detail table column
+frac_sig_al_alza	frac_sig_up	degs.py	DEG summary column
+fraccion	fraction	interactions.py	summary column
+gen	gene	degs.py, interactions.py, qc.py	gene column in report tables
+genes_mediana	median_genes	degs.py	DEG summary column
+humano	human	interactions.py	ortholog report column
+iqr_boot	boot_iqr	trajectory.py	bootstrap table column
+ligando	ligand	interactions.py	role value
+mediana_boot	boot_median	trajectory.py	bootstrap table column
+medianas	medians	qc.py	threshold_report key
+modas	modes	qc.py	threshold_report key
+muestra	sample	qc.py	threshold_report / droplet summary column
+n_celulas	n_cells_es	degs.py, processing.py, qc.py	detail table column
+n_grupos	n_groups	trajectory.py	paga_report() result key
+n_modas	n_modes	qc.py	threshold_report key
+n_poblaciones	n_populations	degs.py	count column
+neg_pct_expresando	neg_pct_expressing	qc.py	detail table column
+negativo	negative	qc.py	fpr_tradeoff "tipo" value
+orden	ordering	trajectory.py	paga_report() result key
+orden_externo	external_ordering	trajectory.py	paga_report() result key
+otro	other	qc.py	obs['nf_group'] value
+par_celular	cell_pair	interactions.py	interaction table column
+pct_expresando	pct_expressing	qc.py	detail table column
+pct_presentes	pct_present	characterization.py	marker report column
+poblacion	population	characterization.py, degs.py, ontology.py, qc.py	population column
+poblaciones	populations	degs.py	population list column
+positivo	positive	qc.py	fpr_tradeoff "tipo" value
+reduccion	reduction	ontology.py	ontology report column
+rescatado	rescued	qc.py	obs['nf_group'] value
+senal_perdida	signal_lost	qc.py	detail table column
+senal_perdida_counts	signal_lost_counts	qc.py	detail table column
+separacion	separation	qc.py	threshold_report key
+spread_entre_muestras	spread_across_samples	normalization.py	normalization report key
+subunidad_receptor	receptor_subunit	interactions.py	role value
+tiene_ortologo	has_ortholog	interactions.py	ortholog report column
+tipo	kind	interactions.py, qc.py	ortholog / fpr_tradeoff column
+transiciones	transitions	trajectory.py	paga_report() result key
+valles	valleys	qc.py	threshold_report key
+solo_{name}	only_{name}	interactions.py	database-coverage value
