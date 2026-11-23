@@ -104,7 +104,7 @@ Adopted guidelines and their version: *to be pinned when the guidelines are copi
   and `norm_cpm_log1p` (produced by no notebook and consumed by none). `counts_raw` and the
   velocyto layers (`spliced`, `unspliced`, `ambiguous`) are **kept in all eleven objects**: there
   is room for them, and keeping them lets a third party re-audit the ambient correction and rerun
-  velocyto. See `docs/H5AD_SLIMMING_SPEC.md` for the per-object table.
+  velocyto. `kranocyte.submissions.SlimSpec` holds the per-object policy.
 - **2026-11-20** — Versioning policy: git keeps only the minimal reproducible set. Results and
   figures go to two Zenodo deposits with a checksum manifest.
 - **2026-11-20** — Fixed a regression in `workflow/lib/common.sh`: the completion check looked for

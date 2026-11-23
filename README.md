@@ -72,7 +72,7 @@ jupyter lab notebooks/1AA_cell_type_characterization.ipynb
 The deposited objects carry `X` (scran + log1p) plus the `counts_raw`, `counts_cellbender`,
 `spliced`, `unspliced` and `ambiguous` layers. Only three layers were removed — `norm_scran_log1p`
 (identical to `X`), `norm_log1p` and `norm_cpm_log1p` — none of which any notebook reads;
-`docs/H5AD_SLIMMING_SPEC.md` gives the per-object table. `prepare_cpdb_input()` needs no argument
+The bundle README gives the per-object table. `prepare_cpdb_input()` needs no argument
 change: it detects the missing layer, falls back to `expm1(X)` when `uns['normalization']` records
 scran, and warns otherwise.
 

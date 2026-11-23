@@ -4,7 +4,7 @@ Preparation of the project deposits.
 Three destinations, with different requirements:
 
 * **Zenodo (data)** — the processed objects slimmed according to
-  ``docs/H5AD_SLIMMING_SPEC.md``: from 48.65 GB to 32.9 GB. This is the re-entry point
+  :class:`SlimSpec` below: from 48.65 GB to 32.9 GB. This is the re-entry point
   artefact: with it, notebook 1 onwards can be run.
 * **Zenodo (code and results)** — notebooks with outputs, final tables and figures, plus
   the container image that produced the matrices.
