@@ -1,17 +1,14 @@
+"""
+Backwards-compatible shim.
 
+Everything here now lives in :mod:`kranocyte.config`, which resolves the project root
+instead of hard-coding one machine's absolute path. Kept so that existing notebooks
+can keep importing ``SEED`` and ``CELLBENDER_FIXED_ARGS`` from here.
+"""
 
-BASE_DIR = "/mnt/data/Proyectos/kranocito"
-SEED = 0
+from .config import ROOT, SEED, CELLBENDER_FIXED_ARGS
 
-CELLBENDER_FIXED_ARGS = [
-    "--epochs", "150",
-    "--fpr", "0.05",     
-    "--learning-rate", "1e-4",
-    "--low-count-threshold", "5",
-    "--z-dim", "64",
-    "--z-layers", "512",
-    "--empty-drop-training-fraction", "0.2",
-    "--projected-ambient-count-threshold", "0.1",
-    "--checkpoint-mins", "15",
-    "--cuda",
-]
+#: Deprecated: use :data:`kranocyte.config.ROOT`.
+BASE_DIR = str(ROOT)
+
+__all__ = ["BASE_DIR", "ROOT", "SEED", "CELLBENDER_FIXED_ARGS"]

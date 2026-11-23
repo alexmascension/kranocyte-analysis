@@ -321,7 +321,7 @@ def prepare_cpdb_input(
         origen = f"expm1('{log_layer}')"
     elif log_layer and adata.uns.get("normalization", {}).get("scran") is not None:
         # DEPOSITED objects do not carry the log layer: it was removed because it is
-        # identical to X (see docs/H5AD_SLIMMING_SPEC.md). Falling through to the
+        # identical to X (see kranocyte.submissions.SlimSpec). Falling through to the
         # library-size branch here would be a SILENT change of method -- a different
         # normalisation with no warning. If uns['normalization'] records scran, X is
         # that same log-normalised matrix and expm1(X) is the right thing to use.

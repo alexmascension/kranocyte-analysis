@@ -6,7 +6,8 @@ absolute path. The root is now resolved in this order:
 
 1. the ``KRANOCYTE_ROOT`` environment variable, if set;
 2. ``config/config.env`` in the repository, if present (key ``KRANOCYTE_ROOT``);
-3. the position of this package, walking up until the repository root is found.
+3. the working directory and its parents (for notebooks and installed packages);
+4. the position of this package, walking up until the repository root is found.
 
 The same code therefore works on the workstation and on the HPC without edits, which
 is where the ``/scratch/alexmascension/...`` path in the old ``config.env`` came from.
@@ -46,8 +47,10 @@ def _discover_root() -> Path:
     if env:
         return _abs(Path(env).expanduser())
 
+    cwd = Path.cwd().resolve()
     here = Path(__file__).resolve()
-    for parent in here.parents:
+    candidates = dict.fromkeys((cwd, *cwd.parents, *here.parents))
+    for parent in candidates:
         value = _from_env_file(parent / "config" / "config.env")
         if value:
             return _abs(Path(value).expanduser())
@@ -61,7 +64,8 @@ def _discover_root() -> Path:
 
     raise RuntimeError(
         "Cannot find the project root. Set KRANOCYTE_ROOT or create "
-        "config/config.env from config/config.example.env."
+        "config/config.env from config/config.example.env, then start Python "
+        "from the project directory or one of its subdirectories."
     )
 
 

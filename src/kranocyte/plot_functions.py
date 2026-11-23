@@ -13,7 +13,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 from adjustText import adjust_text
 
-from .common_vars import BASE_DIR
+from .config import ROOT
 
 
 palette = {
@@ -82,7 +82,7 @@ magma = mpl.colors.LinearSegmentedColormap.from_list("", magma[:65])
 
 
 def set_plotting_style():
-    font_dir = Path(BASE_DIR) / ".cache" / "fonts"
+    font_dir = ROOT / ".cache" / "fonts"
     font_dir.mkdir(parents=True, exist_ok=True)
 
     font_paths = {}
