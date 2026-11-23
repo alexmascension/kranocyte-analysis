@@ -101,8 +101,8 @@ DICT_MARKERS_TENO = {
 }
 
 DICT_MARKERS_SATELLITE = {
-    'Sat_A1': ['Pde3a', 'Frem1', 'Pde10a', 'Bric2', 'Cdk14', 
-               'Rora', 'Esr1', 'Ror1', 'Dmd', 'Ptpng', 
+    'Sat_A1': ['Pde3a', 'Frem1', 'Pde10a', 'Cdk14', 
+               'Rora', 'Esr1', 'Ror1', 'Dmd', 'Ptprg', 
                'Col19a1', 'Tnik', 'Bicc1', 'Pde7b', 'Bnc2', 
                'Kcnma1'],   # No clear markers
     'Sat_A2': ['Rps16', 'Rps3a1', 'Rps10', 'Rps19', 'Rplp0', 'Rps2', 
@@ -129,7 +129,7 @@ DICT_MARKERS_FAP = {
     'FAP_A': ['Sbsn', 'Efna5', 'Adamts16', 'Dact2', 'Krtdap', 'Aldh1a3', 'Ildr2', 
               'Car8', 'Rorb', 'Uchl1', 'Bmp3', 'Sema3e', 'Dmkn', 'Ano3', 'Itgb7'],
     'FAP_AB': ['Cmah', 'Stmn4', 'Robo1', 'Fam167a', 'Duox1', 'Gm33624', 
-               'Cd55', 'Calm1', 'Ugp2', 'Efoc1', 'Prdm8', 'Kcp', 'Des'],
+               'Cd55', 'Calm1', 'Ugp2', 'Prdm8', 'Kcp', 'Des'],
     'FAP_AF': ['C3', 'Postn', 'Slc4a4', 'Ifi27l2a', 'Il1rl2', 'Smpd3', 
                'Il1r2', 'Sfrp2', 'Vegfd', 'Cxcl13', 'Prkg2', 'C7', 
                'Cpz', 'Cdh9', 'Edn1', 'Sema3b', 'Mmp27'],
