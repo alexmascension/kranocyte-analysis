@@ -1,10 +1,8 @@
-[build-system
-]
+[build-system]
 requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
-[project
-]
+[project]
 name = "kranocyte"
 version = "2.0.0"
 description = "Characterisation of kranocyte and FAP populations in mouse skeletal muscle"
@@ -22,11 +20,9 @@ dependencies = [
     "matplotlib",
 ]
 
-[tool.setuptools.packages.find
-]
+[tool.setuptools.packages.find]
 where = ["src"]
 include = ["kranocyte*"]
 
-[tool.setuptools.package-data
-]
+[tool.setuptools.package-data]
 kranocyte = ["py.typed"]
