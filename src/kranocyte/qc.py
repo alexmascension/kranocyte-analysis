@@ -1186,7 +1186,7 @@ def fpr_tradeoff(
                     cpm = np.nanmean(col / tot[mask] * 1e6)
                     rows.append({
                         "fpr": f, "kind": kind, "population": pop, "gene": g,
-                        "n_cells_es": int(mask.sum()),
+                        "n_cells": int(mask.sum()),
                         "pct_expressing": round(100 * float((col > 0).mean()), 2),
                         "mean_cpm": round(float(cpm), 2),
                         "mean_counts": round(float(col.mean()), 3),
@@ -1607,7 +1607,7 @@ def suggest_thresholds(
                    if fiable else
                    "  -> the class does NOT separate; use droplet_exclude=() and filter by "
                      "direct thresholds"))
-    out["_droplet_class_fiable"] = fiable
+    out["_droplet_class_reliable"] = fiable
 
     if verbose:
         print("proposed thresholds:")
@@ -1621,5 +1621,5 @@ def suggest_thresholds(
         print("\n[thr] These are a starting point derived from the distribution of "
               "THIS sample. Before accepting them, run apply_qc_flags and check "
               "what each flag removes in qc_summary.")
-    out["_razones"] = razones
+    out["_reasons"] = razones
     return out

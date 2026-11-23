@@ -339,8 +339,8 @@ def top_degs(
         genes = df["names"].tolist()[:n_top]
         salida[g] = genes
 
-        fila = {"population": g, "testados": n_ini,
-                "tras_filtros": len(df), "usados": len(genes)}
+        fila = {"population": g, "tested": n_ini,
+                "after_filters": len(df), "used": len(genes)}
         if verbose and rank_by != "score" and "scores" in df:
             alt = df.sort_values("scores", ascending=False)["names"].tolist()[:n_top]
             inter = len(set(genes) & set(alt))
@@ -351,7 +351,7 @@ def top_degs(
     tabla = pd.DataFrame(resumen).set_index("population")
     if verbose:
         print(tabla.to_string())
-        pocos = tabla.index[tabla["usados"] < 20].tolist()
+        pocos = tabla.index[tabla["used"] < 20].tolist()
         if pocos:
             print(f"[deg] WARNING: {pocos} are left with fewer than 20 genes. Their "
                   f"GOEA will have very little power, and the absence of terms does "
@@ -361,7 +361,7 @@ def top_degs(
             print(f"[deg] Mean Jaccard between the top-{n_top} by '{rank_by}' and "
                   f"by the scanpy score: {j:.2f}. If it is close to 1, the "
                   f"choice of criterion changes nothing and is not worth discussing.")
-        desigual = tabla["usados"].max() / max(tabla["usados"].min(), 1)
+        desigual = tabla["used"].max() / max(tabla["used"].min(), 1)
         if desigual > 3:
             print(f"[deg] The lists differ up to {desigual:.0f}x in size. "
                   f"The number of significant terms scales with the size "
@@ -395,8 +395,8 @@ def coverage_report(background: Sequence[str], gene_sets: Mapping,
     bg = set(background)
     tal_cual = len(bg & lib) / max(len(bg), 1)
     mayus = len({g.upper() for g in bg} & {g.upper() for g in lib}) / max(len(bg), 1)
-    out = {"libreria": nombre, "n_fondo": len(bg), "n_libreria": len(lib),
-           "cobertura": round(tal_cual, 3), "cobertura_mayusculas": round(mayus, 3)}
+    out = {"library": nombre, "n_background": len(bg), "n_library": len(lib),
+           "coverage": round(tal_cual, 3), "coverage_uppercase": round(mayus, 3)}
     if verbose:
         print(f"[cov] {nombre}: {tal_cual:.1%} of the background is in the library "
               f"({mayus:.1%} ignoring case)")
@@ -574,8 +574,8 @@ def run_goea(
                 continue
             df = enr.results.copy()
             df["population"] = pop
-            df["libreria"] = lib
-            df["n_genes_disponibles"] = len(genes)
+            df["library"] = lib
+            df["n_genes_available"] = len(genes)
             filas.append(df)
 
     if not filas:
@@ -588,7 +588,7 @@ def run_goea(
 
     res = pd.concat(filas, ignore_index=True)
 
-    ren = {"Term": "termino", "Overlap": "solapamiento", "P-value": "pval",
+    ren = {"Term": "term", "Overlap": "overlap", "P-value": "pval",
            "Adjusted P-value": "padj", "Odds Ratio": "odds_ratio",
            "Combined Score": "score", "Genes": "genes"}
     res = res.rename(columns={k: v for k, v in ren.items() if k in res.columns})
@@ -601,15 +601,15 @@ def run_goea(
     if global_fdr and "pval" in res:
         res["padj_global"] = multipletests(res["pval"].to_numpy(), method="fdr_bh")[1]
 
-    orden = [c for c in ("population", "libreria", "termino", "solapamiento",
+    orden = [c for c in ("population", "library", "term", "overlap",
                          "odds_ratio", "pval", "padj", "padj_global", "genes",
-                         "n_primer_plano") if c in res.columns]
+                         "n_foreground") if c in res.columns]
     res = res[orden + [c for c in res.columns if c not in orden]]
     res = res.sort_values(["population", "padj_global" if global_fdr else "padj"])
     # provenance: which GO version was used. GO changes between versions and
     # two analyses with different libraries are not comparable.
-    res.attrs["librerias"] = list(gene_sets.keys())
-    res.attrs["n_fondo"] = len(bg)
+    res.attrs["libraries"] = list(gene_sets.keys())
+    res.attrs["n_background"] = len(bg)
     res.attrs["organism"] = organism
     res.attrs["match_case"] = modo_case
 
@@ -655,26 +655,26 @@ def background_sensitivity(
         rob = background_sensitivity(degs, backgrounds, gene_sets=gs)
 
     Returns one row per (population, term) with the p-value under each
-    background and 'n_fondos_sig' = the number of backgrounds in which it falls below alpha.
+    background and 'n_backgrounds_sig' = the number of backgrounds in which it falls below alpha.
     """
     trozos = {}
     for nombre, bg in backgrounds.items():
         if verbose:
             print(f"\n===== background '{nombre}' ({len(set(bg))} genes) =====")
         r = run_goea(gene_dict, bg, verbose=verbose, **kwargs)
-        trozos[nombre] = r.set_index(["population", "libreria", "termino"])[col_p]
+        trozos[nombre] = r.set_index(["population", "library", "term"])[col_p]
 
     tabla = pd.concat(trozos, axis=1)
     tabla.columns = list(trozos.keys())
-    tabla["n_fondos_sig"] = (tabla < alpha).sum(axis=1)
-    tabla["n_fondos_testado"] = tabla[list(trozos)].notna().sum(axis=1)
-    tabla = tabla.sort_values(["n_fondos_sig", list(trozos)[0]],
+    tabla["n_backgrounds_sig"] = (tabla < alpha).sum(axis=1)
+    tabla["n_backgrounds_tested"] = tabla[list(trozos)].notna().sum(axis=1)
+    tabla = tabla.sort_values(["n_backgrounds_sig", list(trozos)[0]],
                               ascending=[False, True])
 
     if verbose:
         n = len(backgrounds)
-        robustos = tabla[tabla["n_fondos_sig"] == n]
-        frag = tabla[(tabla["n_fondos_sig"] > 0) & (tabla["n_fondos_sig"] < n)]
+        robustos = tabla[tabla["n_backgrounds_sig"] == n]
+        frag = tabla[(tabla["n_backgrounds_sig"] > 0) & (tabla["n_backgrounds_sig"] < n)]
         print(f"\n[sens] {len(robustos)} terms significant with ALL {n} "
               f"backgrounds; {len(frag)} only with some.")
         if len(frag):
@@ -741,8 +741,8 @@ def collapse_redundant(
     if verbose:
         antes = sig.groupby("population").size()
         despues = out.groupby("population").size()
-        tabla = pd.DataFrame({"significativos": antes, "no_redundantes": despues})
-        tabla["reduction"] = (1 - tabla["no_redundantes"] / tabla["significativos"]).round(2)
+        tabla = pd.DataFrame({"significant": antes, "non_redundant": despues})
+        tabla["reduction"] = (1 - tabla["non_redundant"] / tabla["significant"]).round(2)
         print(tabla.to_string())
         print(f"\n[collapse] {len(sig)} -> {len(out)} terms "
               f"(gene Jaccard > {max_jaccard} = redundant)")
@@ -766,25 +766,25 @@ def plot_goea(res: pd.DataFrame, n_top: int = 6, libreria: Optional[str] = None,
     """
     import matplotlib.pyplot as plt
 
-    df = res if libreria is None else res[res["libreria"] == libreria]
+    df = res if libreria is None else res[res["library"] == libreria]
     if col_p not in df:
         col_p = "padj"
 
-    elegidos = (df.sort_values(col_p).groupby("population").head(n_top)["termino"]
+    elegidos = (df.sort_values(col_p).groupby("population").head(n_top)["term"]
                 .drop_duplicates().tolist())
-    sub = df[df["termino"].isin(elegidos)].copy()
+    sub = df[df["term"].isin(elegidos)].copy()
 
-    sub["k"] = sub["solapamiento"].astype(str).str.split("/").str[0].astype(float)
+    sub["k"] = sub["overlap"].astype(str).str.split("/").str[0].astype(float)
     sub["mlog"] = -np.log10(sub[col_p].clip(lower=1e-300))
 
     pops = sorted(sub["population"].unique())
-    terms = (sub.groupby("termino")["mlog"].max().sort_values().index.tolist())
+    terms = (sub.groupby("term")["mlog"].max().sort_values().index.tolist())
     xi = {p: i for i, p in enumerate(pops)}
     yi = {t: i for i, t in enumerate(terms)}
 
     fig, ax = plt.subplots(figsize=figsize, constrained_layout=True)
     sc_ = ax.scatter([xi[p] for p in sub["population"]],
-                     [yi[t] for t in sub["termino"]],
+                     [yi[t] for t in sub["term"]],
                      s=15 * sub["k"], c=sub["mlog"], cmap="magma_r",
                      edgecolors="none")
     ax.set_xticks(range(len(pops)))

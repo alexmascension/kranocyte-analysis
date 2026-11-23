@@ -345,7 +345,7 @@ def soup_vs_hvg_report(
     soup_genes = amb.head(top_soup).index
 
     detalle = pd.DataFrame({ambient_key: amb.head(top_soup)})
-    detalle.insert(0, "rango_soup", np.arange(1, len(soup_genes) + 1))
+    detalle.insert(0, "soup_range", np.arange(1, len(soup_genes) + 1))
     for k in hvg_keys:
         if k in adata.var:
             detalle[k] = adata.var.loc[soup_genes, k].to_numpy().astype(bool)
@@ -364,9 +364,9 @@ def soup_vs_hvg_report(
         p = float(hypergeom.sf(obs - 1, M, top_soup, N)) if obs > 0 else 1.0
         rows.append({
             "hvg_set": k, "n_hvg": N, "n_genes": M,
-            "soup_observados": obs, "soup_esperados": round(esp, 2),
-            "enriquecimiento": round(obs / esp, 2) if esp > 0 else np.nan,
-            "p_hipergeom": p,
+            "soup_observed": obs, "soup_expected": round(esp, 2),
+            "enrichment": round(obs / esp, 2) if esp > 0 else np.nan,
+            "p_hypergeom": p,
         })
     resumen = pd.DataFrame(rows).set_index("hvg_set")
 
@@ -375,8 +375,8 @@ def soup_vs_hvg_report(
         print(resumen.to_string())
         print()
         for k in resumen.index:
-            o, e = resumen.loc[k, "soup_observados"], resumen.loc[k, "soup_esperados"]
-            p = resumen.loc[k, "p_hipergeom"]
+            o, e = resumen.loc[k, "soup_observed"], resumen.loc[k, "soup_expected"]
+            p = resumen.loc[k, "p_hypergeom"]
             if p < 0.05 and o > e:
                 print(f"[soup] {k}: ENRICHED ({o} vs {e:.1f} expected, "
                       f"p={p:.2g}). Consider excluding them before PCA.")
@@ -504,12 +504,12 @@ def harmony_merge_report(
         harm_comp = pd.crosstab(adata.obs["leiden_harmony"],
                                 adata.obs[condition_key], normalize="index")
         rows.append({
-            "leiden_pca": c, "n_cells_es": n,
+            "leiden_pca": c, "n_cells": n,
             "condition": mezcla,
-            "pureza_pca": round(float(comp.loc[c].max()), 3),
+            "purity_pca": round(float(comp.loc[c].max()), 3),
             "n_clusters_harmony": int(len(fila)),
             "harmony_principal": principal,
-            "pureza_harmony_destino": round(float(harm_comp.loc[principal].max()), 3),
+            "purity_harmony_target": round(float(harm_comp.loc[principal].max()), 3),
         })
     sospechosos = pd.DataFrame(rows)
 
@@ -525,7 +525,7 @@ def harmony_merge_report(
             print(f"[harmony] {len(sospechosos)} condition-specific clusters "
                   f"in X_pca:\n")
             print(sospechosos.to_string(index=False))
-            disueltos = sospechosos[sospechosos["pureza_harmony_destino"] < dominance]
+            disueltos = sospechosos[sospechosos["purity_harmony_target"] < dominance]
             if len(disueltos):
                 print(f"\n[harmony] WARNING: {len(disueltos)} of them end up in a "
                       f"MIXED harmony cluster. Inspect their DEGs before accepting "

@@ -64,7 +64,7 @@ def depth_report(adata: ad.AnnData, condition_key: str,
     cols = [condition_key] + ([group_key] if group_key else [])
     g = adata.obs.groupby(cols, observed=True)
     out = pd.DataFrame({
-        "n_cells_es": g.size(),
+        "n_cells": g.size(),
         "median_counts": g[counts_key].median() if counts_key in adata.obs else np.nan,
         "median_genes": (g["n_genes_by_counts"].median()
                           if "n_genes_by_counts" in adata.obs else np.nan),
@@ -203,13 +203,13 @@ def depth_bias_report(res: Mapping[str, pd.DataFrame], adata: ad.AnnData,
     filas = []
     for pop, df in res.items():
         d = df.copy()
-        d["media"] = media.reindex(d["names"]).to_numpy()
-        d["nivel"] = pd.cut(d["media"], [-.01, .05, .3, 1, 5, 1e9],
-                            labels=["~0", "muy bajo", "bajo", "medio", "alto"])
-        for niv, sub in d.groupby("nivel", observed=True):
+        d["mean"] = media.reindex(d["names"]).to_numpy()
+        d["level"] = pd.cut(d["mean"], [-.01, .05, .3, 1, 5, 1e9],
+                            labels=["~0", "very low", "low", "medium", "high"])
+        for niv, sub in d.groupby("level", observed=True):
             sig = sub[sub["pvals_adj"] < 0.05]
             filas.append({
-                "population": pop, "nivel": str(niv), "n": len(sub),
+                "population": pop, "level": str(niv), "n": len(sub),
                 "logFC_medio": round(float(sub["logfoldchanges"].mean()), 3),
                 "delta_detection": (round(float(sub["delta_pct"].mean()), 3)
                                     if "delta_pct" in sub else np.nan),

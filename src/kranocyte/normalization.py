@@ -477,7 +477,7 @@ def library_size_factors(
             f"normalising: their size factor is undefined."
         )
  
-    how = "media"
+    how = "mean"
     if use_scranpy:
         try:
             import scranpy
@@ -518,7 +518,7 @@ def size_factor_report(
     its counts, and those cells end up dominating the variance and
     forming clusters that do not exist.
  
-    If the 'sf_bajo' row has far fewer counts and genes than 'resto', go back
+    If the 'sf_low' row has far fewer counts and genes than 'rest', go back
     to QC and set a min_log1p_counts / min_log1p_genes. That is cleaner than
     patching the size factors afterwards.
     """
@@ -530,13 +530,13 @@ def size_factor_report(
                 "malat1_log1p", "cellbender_removed_frac", key]
     cols = [c for c in cols if c in adata.obs.columns]
  
-    grp = np.where(adata.obs[key].to_numpy() < low, "sf_bajo", "resto")
+    grp = np.where(adata.obs[key].to_numpy() < low, "sf_low", "rest")
     out = adata.obs[cols].groupby(grp, observed=True).median().round(3)
     out.insert(0, "n", pd.Series(grp).value_counts())
  
     if verbose:
         print(out.to_string())
-        n_low = int((grp == "sf_bajo").sum())
+        n_low = int((grp == "sf_low").sum())
         if n_low:
             print(f"\n[sf] {n_low} cells ({100 * n_low / adata.n_obs:.2f}%) "
                   f"with size factor < {low}")
@@ -641,7 +641,7 @@ def compare_normalizations(
  
         row = {
             "layer": lay,
-            "cv_suma": round(float(s.std() / s.mean()), 4),
+            "cv_sum": round(float(s.std() / s.mean()), 4),
             "pc1_vs_depth": round(abs(float(spearmanr(pc1, depth).statistic)), 3),
             "pc1_var_ratio": round(var1, 3),
         }

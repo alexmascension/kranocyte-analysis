@@ -588,8 +588,8 @@ def cpdb_interactions_for(
     u2s = {}
     for c in col_sym:
         u2s.update(dict(zip(gt[col_uni].astype(str), gt[c].astype(str))))
-    hit["simbolo_a"] = hit[col_pa].astype(str).map(u2s).fillna(hit[col_pa])
-    hit["simbolo_b"] = hit[col_pb].astype(str).map(u2s).fillna(hit[col_pb])
+    hit["symbol_a"] = hit[col_pa].astype(str).map(u2s).fillna(hit[col_pa])
+    hit["symbol_b"] = hit[col_pb].astype(str).map(u2s).fillna(hit[col_pb])
 
     if verbose:
         print(f"[db] tables used: gene={gt.shape}, "
@@ -600,7 +600,7 @@ def cpdb_interactions_for(
         if complejos:
             print(f"[db] complexes: {sorted(complejos)[:8]}")
         print(f"[db] {len(hit)} interactions in the database involve them")
-        cols_ver = [c for c in ("simbolo_a", "simbolo_b", "annotation_strategy",
+        cols_ver = [c for c in ("symbol_a", "symbol_b", "annotation_strategy",
                                 "classification", "directionality", "is_integrin")
                     if c in hit.columns]
         if len(hit):
@@ -723,7 +723,7 @@ def filter_interactions(
         In addition to the rows where gene_a/gene_b is exactly your gene, includes
         those whose 'interacting_pair' mentions it: in CellPhoneDB many
         receptors are complexes and the gene appears inside the complex name
-        and not in gene_a/gene_b. They are flagged with the 'via_complejo' column so that
+        and not in gene_a/gene_b. They are flagged with the 'via_complex' column so that
         you can separate them; they are not the same and conflating them inflates the count.
 
     Returns one row per (interaction, cell-type pair) with its mean and
@@ -765,13 +765,13 @@ def filter_interactions(
     m = means.loc[sel, meta_cols + par_cols]
     p = pvals.loc[sel, par_cols] if set(par_cols).issubset(pvals.columns) else None
 
-    largo = m.melt(id_vars=meta_cols, var_name="cell_pair", value_name="media")
+    largo = m.melt(id_vars=meta_cols, var_name="cell_pair", value_name="mean")
     if p is not None:
         pl = pvals.loc[sel, meta_cols + par_cols].melt(
             id_vars=meta_cols, var_name="cell_pair", value_name="pvalue")
         largo = largo.merge(pl, on=meta_cols + ["cell_pair"], how="left")
 
-    largo["via_complejo"] = ~(
+    largo["via_complex"] = ~(
         largo["gene_a"].isin(humanos) | largo["gene_b"].isin(humanos))
 
     if "interaction_scores" in res and isinstance(res["interaction_scores"], pd.DataFrame):
@@ -784,14 +784,14 @@ def filter_interactions(
 
     if "pvalue" in largo:
         largo = largo[largo["pvalue"] <= max_pvalue]
-    largo = largo[largo["media"] > 0].sort_values(
-        ["pvalue", "media"] if "pvalue" in largo else ["media"],
+    largo = largo[largo["mean"] > 0].sort_values(
+        ["pvalue", "mean"] if "pvalue" in largo else ["mean"],
         ascending=[True, False] if "pvalue" in largo else [False])
 
     if verbose:
         print(f"[filtro] {len(largo)} rows (interaction x cell pair) with "
               f"p <= {max_pvalue}")
-        n_dir = int((~largo["via_complejo"]).sum())
+        n_dir = int((~largo["via_complex"]).sum())
         print(f"[filtro] {n_dir} by direct gene, {len(largo)-n_dir} only by "
               f"appearing in the name of a complex")
         if len(largo):
@@ -806,7 +806,7 @@ def plot_interactions(largo: pd.DataFrame, n_top: int = 25, figsize=(11, 8)):
 
     if not len(largo):
         raise ValueError("nothing to plot")
-    top = (largo.groupby("interacting_pair")["media"].max()
+    top = (largo.groupby("interacting_pair")["mean"].max()
            .sort_values(ascending=False).head(n_top).index.tolist())
     sub = largo[largo["interacting_pair"].isin(top)].copy()
 
@@ -815,12 +815,12 @@ def plot_interactions(largo: pd.DataFrame, n_top: int = 25, figsize=(11, 8)):
     xi = {p: i for i, p in enumerate(pares)}
     yi = {t: i for i, t in enumerate(filas)}
     col = (-np.log10(sub["pvalue"].clip(lower=1e-4))
-           if "pvalue" in sub else sub["media"])
+           if "pvalue" in sub else sub["mean"])
 
     fig, ax = plt.subplots(figsize=figsize, constrained_layout=True)
     s = ax.scatter([xi[p] for p in sub["cell_pair"]],
                    [yi[t] for t in sub["interacting_pair"]],
-                   s=20 + 60 * sub["media"] / max(sub["media"].max(), 1e-9),
+                   s=20 + 60 * sub["mean"] / max(sub["mean"].max(), 1e-9),
                    c=col, cmap="magma_r", edgecolors="none")
     ax.set_xticks(range(len(pares)))
     ax.set_xticklabels(pares, rotation=90, fontsize=7)
@@ -901,8 +901,8 @@ def resource_coverage(
             como_rec = rec.apply(lambda x: buscado in x)
             sel = como_lig | como_rec
             filas.append({
-                "recurso": r, "gene": g, "buscado": buscado,
-                "n_pares": int(sel.sum()),
+                "resource": r, "gene": g, "searched": buscado,
+                "n_pairs": int(sel.sum()),
                 "as_ligand": int(como_lig.sum()),
                 "as_receptor": int(como_rec.sum()),
                 "partners": "; ".join(sorted(set(
@@ -912,15 +912,15 @@ def resource_coverage(
             })
     out = pd.DataFrame(filas)
     if verbose:
-        print(out[["recurso", "gene", "buscado", "n_pares", "as_ligand",
+        print(out[["resource", "gene", "searched", "n_pairs", "as_ligand",
                    "as_receptor"]].to_string(index=False))
-        vacios = out[out["n_pares"] == 0]
+        vacios = out[out["n_pairs"] == 0]
         if len(vacios):
             print(f"\n[liana] WARNING: {list(zip(vacios.gen, vacios.recurso))} do not "
                   f"appear in those resources. Their absence from the result does NOT "
                   f"mean that they do not interact: it means that they are not "
                   f"annotated.")
-        for r in out["recurso"].unique():
+        for r in out["resource"].unique():
             sub = out[(out.recurso == r) & (out.n_pares > 0)]
             for f in sub.itertuples():
                 print(f"\n[liana] {f.gen} in {r}: {f.partners}")
@@ -990,7 +990,7 @@ def run_liana(
         key_added=key_added, verbose=verbose, inplace=True,
     )
     res = adata.uns[key_added].copy()
-    res["recurso"] = resource
+    res["resource"] = resource
 
     if verbose:
         print(f"[liana] {len(res)} interactions in {time.time()-t0:.0f}s")
@@ -1250,7 +1250,7 @@ def orden_columnas_liana(res: pd.DataFrame) -> pd.DataFrame:
                "L_source", "R_target", "L_global", "R_global",
                "L_target", "R_source"]
     detras = ["lr_means", "expr_prod", "lrscore", "cellphone_pvals",
-              "recurso"]
+              "resource"]
     d = [c for c in delante if c in res.columns]
     t = [c for c in detras if c in res.columns]
     resto = [c for c in res.columns if c not in d and c not in t]
@@ -1424,17 +1424,17 @@ def compare_resources(
 
     todo["_sig"] = todo[rank_col] <= max_rank
     tabla = todo.groupby(clave).agg(
-        n_recursos_testado=("recurso", "nunique"),
+        n_recursos_testado=("resource", "nunique"),
         n_recursos_sig=("_sig", "sum"),
         mejor_rank=(rank_col, "min"),
     ).reset_index()
-    tabla["fraction"] = (tabla["n_recursos_sig"]
-                         / tabla["n_recursos_testado"].clip(lower=1))
-    tabla = tabla.sort_values(["n_recursos_sig", "mejor_rank"],
+    tabla["fraction"] = (tabla["n_resources_sig"]
+                         / tabla["n_resources_tested"].clip(lower=1))
+    tabla = tabla.sort_values(["n_resources_sig", "best_rank"],
                               ascending=[False, True])
 
     if verbose:
-        n = todo["recurso"].nunique()
+        n = todo["resource"].nunique()
         print(f"\n[recursos] {n} resources run")
         print(f"[recursos] pairs annotated in all {n}: "
               f"{int((tabla.n_recursos_testado == n).sum())}")
@@ -1543,7 +1543,7 @@ def delta_liana(
     ------------------
     A pair may be missing from a table because the gene is not expressed or because it
     did not reach `expr_prop`, which is a fraction of cells, not a mean. These are
-    opposite conclusions and the table separates them in 'motivo':
+    opposite conclusions and the table separates them in 'reason':
 
       no_expresado      the mean is 0 in that condition
       bajo_expr_prop    there is expression but in fewer than expr_prop of cells
@@ -1596,10 +1596,10 @@ def delta_liana(
 
     en_a = clave.isin(A.index)
     en_b = clave.isin(B.index)
-    out["estado"] = np.where(en_a & en_b, "both_dbs",
+    out["status"] = np.where(en_a & en_b, "both_dbs",
                     np.where(en_a, f"only_{na}",
                     np.where(en_b, f"only_{nb}", "in_neither")))
-    out["motivo"] = np.where(out["estado"] == "both_dbs", "", "desconocido")
+    out["reason"] = np.where(out["status"] == "both_dbs", "", "unknown")
 
     # --- fill in the missing side, if given the means to do so
     if adatas is not None and groupby is not None:
@@ -1611,7 +1611,7 @@ def delta_liana(
         src = clave.get_level_values("source").to_numpy()
         tgt = clave.get_level_values("target").to_numpy()
 
-        motivo = out["motivo"].to_numpy(dtype=object)
+        motivo = out["reason"].to_numpy(dtype=object)
         for nom, adata, presente in ((na, adatas[0], en_a),
                                      (nb, adatas[1], en_b)):
             if presente.all():
@@ -1634,10 +1634,10 @@ def delta_liana(
                            np.nan_to_num(pR, nan=0.0))
             cero = np.fmin(np.nan_to_num(Ls, nan=0.0),
                            np.nan_to_num(Rt, nan=0.0)) <= 0
-            motivo[falta & cero] = "no_expresado"
-            motivo[falta & ~cero & (peor < expr_prop)] = "bajo_expr_prop"
-            motivo[falta & ~cero & (peor >= expr_prop)] = "presente_sin_anotar"
-        out["motivo"] = motivo
+            motivo[falta & cero] = "not_expressed"
+            motivo[falta & ~cero & (peor < expr_prop)] = "low_expr_prop"
+            motivo[falta & ~cero & (peor >= expr_prop)] = "present_unannotated"
+        out["reason"] = motivo
 
     for c in usables:
         out[f"d_{c}"] = out[f"{c}_{nb}"] - out[f"{c}_{na}"]
@@ -1647,7 +1647,7 @@ def delta_liana(
     if min_abs_delta is not None:
         out = out[out[ref].abs() >= min_abs_delta]
 
-    orden = (["estado", "motivo"]
+    orden = (["status", "reason"]
              + [f"d_{c}" for c in usables]
              + [f"{c}_{n}" for c in usables for n in (na, nb)])
     out = out[orden].reset_index()
@@ -1655,11 +1655,11 @@ def delta_liana(
     if verbose:
         print(f"[delta] {len(clave)} pairs compared "
               f"({nb} minus {na}), sorted by |{ref}|")
-        print(out["estado"].value_counts().to_string())
-        m = out.loc[out["motivo"] != "", "motivo"].value_counts()
+        print(out["status"].value_counts().to_string())
+        m = out.loc[out["reason"] != "", "reason"].value_counts()
         if len(m):
             print(m.to_string())
-            if (out["motivo"] == "desconocido").any():
+            if (out["reason"] == "unknown").any():
                 print("[delta] pass adatas=(a, b) and groupby to find out whether "
                       "the absent pairs are at zero or only below "
                       "expr_prop; it is not the same.")

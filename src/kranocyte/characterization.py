@@ -245,12 +245,12 @@ def check_marker_dict(
         en_soup = sorted(set(presentes) & soup)
         rows.append({
             "population": pop,
-            "n_marcadores": len(genes),
-            "n_unicos": len(set(genes)),
-            "presentes": len(set(presentes)),
-            "ausentes": len(set(ausentes)),
+            "n_markers": len(genes),
+            "n_unique": len(set(genes)),
+            "present": len(set(presentes)),
+            "missing": len(set(ausentes)),
             "pct_present": round(100 * len(set(presentes)) / max(len(set(genes)), 1), 1),
-            "duplicados": ", ".join(dups),
+            "duplicates": ", ".join(dups),
             "en_soup": ", ".join(en_soup),
         })
         if ausentes:
